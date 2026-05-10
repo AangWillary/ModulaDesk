@@ -15,6 +15,8 @@ export interface Manifest {
     resizable: boolean;
   };
   type: "web" | "native" | "embedded";
+  /** Configuration for embedded-type modules */
+  embedded?: EmbeddedConfig;
   permissions: string[];
   settings: Record<
     string,
@@ -24,6 +26,22 @@ export interface Manifest {
       label: string;
     }
   >;
+}
+
+export interface WindowInfo {
+  hwnd: number;
+  title: string;
+  className: string;
+  processName: string;
+}
+
+export interface EmbeddedConfig {
+  /** Window class name to match (e.g. "CASCADIA_HOSTING_WINDOW_CLASS" for Windows Terminal) */
+  className?: string;
+  /** Window title substring to match */
+  titleMatch?: string;
+  /** Command to launch the process if not already running */
+  launchCommand?: string;
 }
 
 export interface DirEntry {

@@ -1,0 +1,25 @@
+{
+  "id": "terminal",
+  "name": "终端",
+  "version": "1.0.0",
+  "author": "judy",
+  "description": "嵌入 Windows Terminal 到格子中",
+  "icon": "💻",
+  "grid": {
+    "minWidth": 3,
+    "minHeight": 2,
+    "maxWidth": 8,
+    "maxHeight": 6,
+    "defaultWidth": 5,
+    "defaultHeight": 3,
+    "resizable": true
+  },
+  "type": "embedded",
+  "embedded": {
+    "className": "CASCADIA_HOSTING_WINDOW_CLASS",
+    "titleMatch": "Terminal",
+    "launchCommand": "wt.exe"
+  },
+  "permissions": ["system:shell"],
+  "settings": {}
+}

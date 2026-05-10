@@ -15,6 +15,10 @@ pub fn run() {
             commands::http_get,
             commands::read_dir,
             commands::open_path,
+            commands::list_windows,
+            commands::embed_window,
+            commands::resize_embedded,
+            commands::detach_window,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

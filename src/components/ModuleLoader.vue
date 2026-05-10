@@ -1,9 +1,10 @@
 <script setup lang="ts">
-import { ref, onMounted, onBeforeUnmount } from "vue";
+import { ref, onMounted, onBeforeUnmount, watch } from "vue";
 import type { LayoutItem } from "../stores/layout";
-import type { Module, ModuleContext } from "../types/module";
+import type { Module, ModuleContext, Manifest } from "../types/module";
 import { useModuleStore } from "../stores/modules";
 import { createModuleContext } from "../composables/useModuleContext";
+import { invoke } from "@tauri-apps/api/core";
 
 const props = defineProps<{ item: LayoutItem }>();
 
@@ -15,6 +16,106 @@ const loading = ref(true);
 let moduleInstance: Module | null = null;
 let ctx: ModuleContext | null = null;
 let initialized = false;
+let embeddedHwnd: number | null = null;
+
+async function mountWebModule(manifest: Manifest) {
+  if (!containerRef.value) return;
+
+  const mod = await moduleStore.loadModule(props.item.moduleId);
+  moduleInstance = mod;
+
+  ctx = createModuleContext(
+    props.item.moduleId,
+    containerRef.value,
+    manifest
+  );
+
+  moduleStore.registerInstance(props.item.instanceId, mod, manifest);
+
+  if (!initialized && mod.onInit) {
+    await mod.onInit(ctx);
+    initialized = true;
+    moduleStore.markInitialized(props.item.instanceId);
+  }
+
+  if (mod.onMount) {
+    await mod.onMount(ctx);
+  }
+}
+
+async function mountEmbeddedModule(manifest: Manifest) {
+  if (!containerRef.value) return;
+
+  const config = manifest.embedded;
+  if (!config) throw new Error("Embedded module missing 'embedded' config");
+
+  // Show placeholder while we search for the window
+  containerRef.value.innerHTML = `
+    <div style="display:flex;align-items:center;justify-content:center;height:100%;
+                flex-direction:column;gap:8px;color:rgba(255,255,255,0.5);">
+      <div style="font-size:2rem;">${manifest.icon}</div>
+      <div>正在查找窗口...</div>
+    </div>
+  `;
+
+  // Launch process if needed
+  if (config.launchCommand) {
+    try {
+      await invoke("exec_command", { command: config.launchCommand });
+      // Wait a bit for the window to appear
+      await new Promise((r) => setTimeout(r, 1500));
+    } catch {
+      // Process may already be running
+    }
+  }
+
+  // Find the target window
+  const windows = await invoke<Array<{ hwnd: number; title: string; className: string }>>(
+    "list_windows"
+  );
+
+  let target = null;
+  for (const w of windows) {
+    if (config.className && w.className === config.className) {
+      target = w;
+      break;
+    }
+    if (config.titleMatch && w.title.includes(config.titleMatch)) {
+      target = w;
+      break;
+    }
+  }
+
+  if (!target) {
+    throw new Error(
+      `找不到目标窗口${config.className ? ` (class: ${config.className})` : ""}${config.titleMatch ? ` (title: ${config.titleMatch})` : ""}`
+    );
+  }
+
+  embeddedHwnd = target.hwnd;
+
+  // Calculate position relative to container
+  const rect = containerRef.value.getBoundingClientRect();
+  const result = await invoke<boolean>("embed_window", {
+    targetHwnd: target.hwnd,
+    x: 0,
+    y: 0,
+    width: Math.round(rect.width),
+    height: Math.round(rect.height),
+  });
+
+  if (!result) {
+    throw new Error("嵌入窗口失败");
+  }
+
+  containerRef.value.innerHTML = `
+    <div style="display:flex;align-items:center;justify-content:center;height:100%;
+                flex-direction:column;gap:4px;color:rgba(255,255,255,0.3);font-size:11px;">
+      <div>${manifest.icon} ${target.title}</div>
+      <div>已嵌入</div>
+    </div>
+  `;
+}
 
 async function mountModule() {
   if (!containerRef.value) return;
@@ -22,29 +123,14 @@ async function mountModule() {
   error.value = null;
 
   try {
-    const mod = await moduleStore.loadModule(props.item.moduleId);
-    moduleInstance = mod;
-
     const manifest = moduleStore.getManifest(props.item.moduleId);
     if (!manifest)
       throw new Error(`Manifest not found for "${props.item.moduleId}"`);
 
-    ctx = createModuleContext(
-      props.item.moduleId,
-      containerRef.value,
-      manifest
-    );
-
-    moduleStore.registerInstance(props.item.instanceId, mod, manifest);
-
-    if (!initialized && mod.onInit) {
-      await mod.onInit(ctx);
-      initialized = true;
-      moduleStore.markInitialized(props.item.instanceId);
-    }
-
-    if (mod.onMount) {
-      await mod.onMount(ctx);
+    if (manifest.type === "embedded") {
+      await mountEmbeddedModule(manifest);
+    } else {
+      await mountWebModule(manifest);
     }
   } catch (e) {
     error.value = e instanceof Error ? e.message : String(e);
@@ -58,6 +144,16 @@ async function mountModule() {
 }
 
 async function unmountModule() {
+  if (embeddedHwnd !== null) {
+    try {
+      await invoke("detach_window", { targetHwnd: embeddedHwnd });
+    } catch (e) {
+      console.error("[ModuleLoader] detach error:", e);
+    }
+    embeddedHwnd = null;
+    return;
+  }
+
   if (moduleInstance?.onUnmount) {
     try {
       await moduleInstance.onUnmount();
@@ -80,6 +176,26 @@ async function destroyModule() {
   ctx = null;
   initialized = false;
 }
+
+// Resize embedded window when grid cell size changes
+watch(
+  () => [props.item.w, props.item.h],
+  async () => {
+    if (embeddedHwnd === null || !containerRef.value) return;
+    try {
+      const rect = containerRef.value.getBoundingClientRect();
+      await invoke("resize_embedded", {
+        targetHwnd: embeddedHwnd,
+        x: 0,
+        y: 0,
+        width: Math.round(rect.width),
+        height: Math.round(rect.height),
+      });
+    } catch (e) {
+      console.error("[ModuleLoader] resize error:", e);
+    }
+  }
+);
 
 onMounted(() => {
   mountModule();
