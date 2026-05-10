@@ -1,0 +1,20 @@
+{
+  "id": "todo",
+  "name": "待办清单",
+  "version": "1.0.0",
+  "author": "judy",
+  "description": "简单的待办事项清单，支持添加、完成、删除和拖拽排序",
+  "icon": "✅",
+  "grid": {
+    "minWidth": 2,
+    "minHeight": 2,
+    "maxWidth": 4,
+    "maxHeight": 4,
+    "defaultWidth": 3,
+    "defaultHeight": 3,
+    "resizable": true
+  },
+  "type": "web",
+  "permissions": [],
+  "settings": {}
+}

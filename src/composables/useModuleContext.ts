@@ -1,4 +1,4 @@
-import type { ModuleContext, Manifest } from "../types/module";
+import type { ModuleContext, Manifest, DirEntry } from "../types/module";
 import { eventBus } from "./useEventBus";
 import { invoke } from "@tauri-apps/api/core";
 
@@ -51,6 +51,13 @@ export function createModuleContext(
     async writeFile(path: string, content: string): Promise<void> {
       checkPermission(manifest, "file:write");
       return invoke("write_file", { path, content });
+    },
+    async readDir(path: string): Promise<DirEntry[]> {
+      checkPermission(manifest, "file:read");
+      return invoke<DirEntry[]>("read_dir", { path });
+    },
+    async openPath(path: string): Promise<void> {
+      return invoke("open_path", { path });
     },
     async exec(
       command: string

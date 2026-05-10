@@ -1,0 +1,20 @@
+{
+  "id": "quick-launch",
+  "name": "快捷启动",
+  "version": "1.0.0",
+  "author": "judy",
+  "description": "常用应用和网址的快捷启动面板",
+  "icon": "🚀",
+  "grid": {
+    "minWidth": 2,
+    "minHeight": 1,
+    "maxWidth": 6,
+    "maxHeight": 4,
+    "defaultWidth": 3,
+    "defaultHeight": 2,
+    "resizable": true
+  },
+  "type": "web",
+  "permissions": [],
+  "settings": {}
+}

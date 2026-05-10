@@ -1,0 +1,26 @@
+{
+  "id": "file-explorer",
+  "name": "文件浏览器",
+  "version": "1.0.0",
+  "author": "judy",
+  "description": "桌面文件浏览器，支持目录导航、搜索和文件操作",
+  "icon": "📁",
+  "grid": {
+    "minWidth": 3,
+    "minHeight": 2,
+    "maxWidth": 8,
+    "maxHeight": 6,
+    "defaultWidth": 4,
+    "defaultHeight": 3,
+    "resizable": true
+  },
+  "type": "web",
+  "permissions": ["file:read", "file:write"],
+  "settings": {
+    "startPath": {
+      "type": "string",
+      "default": "",
+      "label": "起始目录（留空则使用桌面）"
+    }
+  }
+}

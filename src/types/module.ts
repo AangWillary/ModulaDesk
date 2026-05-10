@@ -26,6 +26,14 @@ export interface Manifest {
   >;
 }
 
+export interface DirEntry {
+  name: string;
+  path: string;
+  isDir: boolean;
+  size: number;
+  modified: string | null;
+}
+
 export interface ModuleContext {
   readonly moduleId: string;
   readonly container: HTMLElement;
@@ -41,6 +49,8 @@ export interface ModuleContext {
   system: {
     readFile(path: string): Promise<string>;
     writeFile(path: string, content: string): Promise<void>;
+    readDir(path: string): Promise<DirEntry[]>;
+    openPath(path: string): Promise<void>;
     exec(
       command: string
     ): Promise<{ stdout: string; stderr: string }>;

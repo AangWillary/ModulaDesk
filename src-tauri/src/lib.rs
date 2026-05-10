@@ -13,6 +13,8 @@ pub fn run() {
             commands::clipboard_read,
             commands::clipboard_write,
             commands::http_get,
+            commands::read_dir,
+            commands::open_path,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
