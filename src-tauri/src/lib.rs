@@ -1,10 +1,27 @@
 mod commands;
 mod core;
 
+use core::window;
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
+        .setup(|app| {
+            // Configure window for desktop embedding on Windows
+            if let Some(win) = app.get_webview_window("main") {
+                #[cfg(windows)]
+                {
+                    use tauri::Manager;
+                    if let Ok(hwnd) = win.hwnd() {
+                        let h = hwnd.0 as isize;
+                        window::set_tool_window(h);
+                        window::set_window_bottom(h);
+                    }
+                }
+            }
+            Ok(())
+        })
         .invoke_handler(tauri::generate_handler![
             commands::get_system_info,
             commands::read_file,
