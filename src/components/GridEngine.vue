@@ -2,10 +2,13 @@
 import { ref, onMounted, onBeforeUnmount } from "vue";
 import { useGrid } from "../composables/useGrid";
 import { useLayoutStore, type LayoutItem } from "../stores/layout";
+import { useModuleStore } from "../stores/modules";
 import GridCell from "./GridCell.vue";
+import ModuleLoader from "./ModuleLoader.vue";
 
 const grid = useGrid();
 const layout = useLayoutStore();
+const moduleStore = useModuleStore();
 const containerRef = ref<HTMLElement>();
 const containerRect = ref<DOMRect | null>(null);
 
@@ -25,6 +28,7 @@ onMounted(() => {
     resizeObserver.observe(containerRef.value);
   }
   layout.loadFromStorage();
+  moduleStore.discover();
 });
 
 onBeforeUnmount(() => {
@@ -66,9 +70,10 @@ function handleRemove(instanceId: string) {
       @resize="handleResize"
       @remove="handleRemove"
     >
-      <div class="cell-placeholder">
+      <ModuleLoader v-if="item.moduleId !== 'empty'" :item="item" />
+      <div v-else class="cell-placeholder">
         <span class="cell-icon">📦</span>
-        <span class="cell-text">模块</span>
+        <span class="cell-text">未分配模块</span>
       </div>
     </GridCell>
   </div>

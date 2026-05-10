@@ -1,13 +1,39 @@
 <script setup lang="ts">
+import { ref } from "vue";
 import { useLayoutStore } from "../stores/layout";
 import { useGrid } from "../composables/useGrid";
+import { useModuleStore } from "../stores/modules";
 
 const layout = useLayoutStore();
 const grid = useGrid();
+const moduleStore = useModuleStore();
 
-function addCell() {
+const showPicker = ref(false);
+
+function addModule(moduleId: string) {
+  const manifest = moduleStore.getManifest(moduleId);
+  if (!manifest) return;
+  const item = grid.createItem({
+    moduleId,
+    w: manifest.grid.defaultWidth,
+    h: manifest.grid.defaultHeight,
+    minW: manifest.grid.minWidth,
+    minH: manifest.grid.minHeight,
+    maxW: manifest.grid.maxWidth,
+    maxH: manifest.grid.maxHeight,
+  });
+  layout.addItem(item);
+  showPicker.value = false;
+}
+
+function addEmpty() {
   const item = grid.createItem();
   layout.addItem(item);
+  showPicker.value = false;
+}
+
+function togglePicker() {
+  showPicker.value = !showPicker.value;
 }
 </script>
 
@@ -15,7 +41,28 @@ function addCell() {
   <header class="topbar">
     <h1 class="title">ModulaDesk</h1>
     <div class="actions">
-      <button class="btn btn-primary" @click="addCell">+ 添加格子</button>
+      <div class="picker-wrapper">
+        <button class="btn btn-primary" @click="togglePicker">+ 添加模块</button>
+        <div v-if="showPicker" class="picker-dropdown">
+          <button
+            v-for="manifest in moduleStore.getAllManifests()"
+            :key="manifest.id"
+            class="picker-item"
+            @click="addModule(manifest.id)"
+          >
+            <span class="picker-icon">{{ manifest.icon }}</span>
+            <span class="picker-name">{{ manifest.name }}</span>
+          </button>
+          <div v-if="moduleStore.getAllManifests().length === 0" class="picker-empty">
+            暂无可用模块
+          </div>
+          <div class="picker-divider" />
+          <button class="picker-item" @click="addEmpty">
+            <span class="picker-icon">📦</span>
+            <span class="picker-name">空白格子</span>
+          </button>
+        </div>
+      </div>
     </div>
   </header>
 </template>
@@ -70,5 +117,62 @@ function addCell() {
 
 .btn-primary:hover {
   background: rgba(59, 130, 246, 0.9);
+}
+
+.picker-wrapper {
+  position: relative;
+}
+
+.picker-dropdown {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  min-width: 180px;
+  background: rgba(40, 40, 40, 0.95);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  padding: 4px;
+  z-index: 100;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+}
+
+.picker-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 8px 12px;
+  border: none;
+  border-radius: 6px;
+  background: none;
+  color: #e0e0e0;
+  font-size: 13px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.picker-item:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.picker-icon {
+  font-size: 16px;
+}
+
+.picker-name {
+  flex: 1;
+}
+
+.picker-empty {
+  padding: 8px 12px;
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.3);
+}
+
+.picker-divider {
+  height: 1px;
+  background: rgba(255, 255, 255, 0.06);
+  margin: 4px 0;
 }
 </style>

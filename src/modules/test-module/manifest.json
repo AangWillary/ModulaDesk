@@ -1,0 +1,20 @@
+{
+  "id": "test",
+  "name": "测试模块",
+  "version": "1.0.0",
+  "author": "judy",
+  "description": "最小测试模块，验证生命周期和 ModuleContext",
+  "icon": "🧪",
+  "grid": {
+    "minWidth": 2,
+    "minHeight": 1,
+    "maxWidth": 6,
+    "maxHeight": 3,
+    "defaultWidth": 3,
+    "defaultHeight": 2,
+    "resizable": true
+  },
+  "type": "web",
+  "permissions": [],
+  "settings": {}
+}

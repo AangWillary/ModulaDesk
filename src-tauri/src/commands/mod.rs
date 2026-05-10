@@ -1,17 +1,12 @@
-use serde::{Deserialize, Serialize};
+mod clipboard;
+mod file_ops;
+mod http;
+mod process;
+mod system_info;
 
-#[derive(Debug, Serialize, Deserialize)]
-pub struct SystemInfo {
-    pub os: String,
-    pub arch: String,
-    pub version: String,
-}
-
-#[tauri::command]
-pub fn get_system_info() -> SystemInfo {
-    SystemInfo {
-        os: std::env::consts::OS.to_string(),
-        arch: std::env::consts::ARCH.to_string(),
-        version: std::env::consts::FAMILY.to_string(),
-    }
-}
+pub use clipboard::*;
+pub use file_ops::*;
+pub use http::*;
+pub use process::CommandResult;
+pub use process::*;
+pub use system_info::*;
