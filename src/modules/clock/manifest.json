@@ -1,0 +1,31 @@
+{
+  "id": "clock",
+  "name": "时钟",
+  "version": "1.0.0",
+  "author": "judy",
+  "description": "桌面时钟小组件",
+  "icon": "🕐",
+  "grid": {
+    "minWidth": 2,
+    "minHeight": 1,
+    "maxWidth": 4,
+    "maxHeight": 2,
+    "defaultWidth": 2,
+    "defaultHeight": 1,
+    "resizable": true
+  },
+  "type": "web",
+  "permissions": [],
+  "settings": {
+    "format24h": {
+      "type": "boolean",
+      "default": true,
+      "label": "24 小时制"
+    },
+    "showSeconds": {
+      "type": "boolean",
+      "default": false,
+      "label": "显示秒数"
+    }
+  }
+}
