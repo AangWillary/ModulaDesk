@@ -1,21 +1,49 @@
 #[cfg(windows)]
-use windows::Win32::Foundation::HWND;
-#[cfg(windows)]
-use windows::Win32::UI::WindowsAndMessaging::*;
+mod win32 {
+    #![allow(non_snake_case, dead_code)]
 
-/// Set window to bottom of z-order (below desktop icons on some setups)
+    pub type HWND = *mut core::ffi::c_void;
+    pub type LONG = i32;
+    pub type DWORD = u32;
+    pub type BOOL = i32;
+
+    pub const HWND_BOTTOM: HWND = 1 as HWND;
+    pub const GWL_EXSTYLE: i32 = -20;
+    pub const SWP_NOMOVE: DWORD = 0x0002;
+    pub const SWP_NOSIZE: DWORD = 0x0001;
+    pub const SWP_NOACTIVATE: DWORD = 0x0010;
+    pub const WS_EX_TOOLWINDOW: DWORD = 0x00000080;
+    pub const WS_EX_NOACTIVATE: DWORD = 0x08000000;
+    pub const WS_EX_TRANSPARENT: DWORD = 0x00000020;
+
+    extern "system" {
+        pub fn SetWindowPos(
+            hWnd: HWND,
+            hWndInsertAfter: HWND,
+            X: i32,
+            Y: i32,
+            cx: i32,
+            cy: i32,
+            uFlags: DWORD,
+        ) -> BOOL;
+
+        pub fn GetWindowLongW(hWnd: HWND, nIndex: i32) -> LONG;
+        pub fn SetWindowLongW(hWnd: HWND, nIndex: i32, dwNewLong: LONG) -> LONG;
+    }
+}
+
+/// Set window to bottom of z-order
 #[cfg(windows)]
 pub fn set_window_bottom(hwnd: isize) {
     unsafe {
-        let hwnd = HWND(hwnd as *mut _);
-        let _ = SetWindowPos(
-            hwnd,
-            HWND_BOTTOM,
+        win32::SetWindowPos(
+            hwnd as win32::HWND,
+            win32::HWND_BOTTOM,
             0,
             0,
             0,
             0,
-            SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE,
+            win32::SWP_NOMOVE | win32::SWP_NOSIZE | win32::SWP_NOACTIVATE,
         );
     }
 }
@@ -24,39 +52,39 @@ pub fn set_window_bottom(hwnd: isize) {
 #[cfg(windows)]
 pub fn set_tool_window(hwnd: isize) {
     unsafe {
-        let hwnd = HWND(hwnd as *mut _);
-        let ex_style = GetWindowLongW(hwnd, GWL_EXSTYLE);
-        let _ = SetWindowLongW(
-            hwnd,
-            GWL_EXSTYLE,
-            ex_style | WS_EX_TOOLWINDOW.0 as i32 | WS_EX_NOACTIVATE.0 as i32,
+        let h = hwnd as win32::HWND;
+        let ex_style = win32::GetWindowLongW(h, win32::GWL_EXSTYLE);
+        win32::SetWindowLongW(
+            h,
+            win32::GWL_EXSTYLE,
+            ex_style | win32::WS_EX_TOOLWINDOW as i32 | win32::WS_EX_NOACTIVATE as i32,
         );
     }
 }
 
-/// Enable or disable click-through (mouse events pass through to windows below)
+/// Enable or disable click-through
 #[cfg(windows)]
 pub fn set_click_through(hwnd: isize, enable: bool) {
     unsafe {
-        let hwnd = HWND(hwnd as *mut _);
-        let ex_style = GetWindowLongW(hwnd, GWL_EXSTYLE);
+        let h = hwnd as win32::HWND;
+        let ex_style = win32::GetWindowLongW(h, win32::GWL_EXSTYLE);
         if enable {
-            let _ = SetWindowLongW(
-                hwnd,
-                GWL_EXSTYLE,
-                ex_style | WS_EX_TRANSPARENT.0 as i32,
+            win32::SetWindowLongW(
+                h,
+                win32::GWL_EXSTYLE,
+                ex_style | win32::WS_EX_TRANSPARENT as i32,
             );
         } else {
-            let _ = SetWindowLongW(
-                hwnd,
-                GWL_EXSTYLE,
-                ex_style & !(WS_EX_TRANSPARENT.0 as i32),
+            win32::SetWindowLongW(
+                h,
+                win32::GWL_EXSTYLE,
+                ex_style & !(win32::WS_EX_TRANSPARENT as i32),
             );
         }
     }
 }
 
-// Stub implementations for non-Windows platforms
+// Stubs for non-Windows
 #[cfg(not(windows))]
 pub fn set_window_bottom(_hwnd: isize) {}
 
