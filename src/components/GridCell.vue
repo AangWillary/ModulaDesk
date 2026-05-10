@@ -20,6 +20,9 @@ const cellRef = ref<HTMLElement>();
 const isDragging = ref(false);
 const isResizing = ref(false);
 
+let dragRaf = 0;
+let resizeRaf = 0;
+
 const style = computed(() => {
   const left = props.gap + props.item.x * (props.colWidth + props.gap);
   const top = props.gap + props.item.y * (props.rowHeight + props.gap);
@@ -60,26 +63,31 @@ function onDragStart(e: MouseEvent) {
 
 function onDragMove(e: MouseEvent) {
   if (!isDragging.value) return;
+  if (dragRaf) return;
 
-  const dx = e.clientX - dragStartX;
-  const dy = e.clientY - dragStartY;
+  dragRaf = requestAnimationFrame(() => {
+    dragRaf = 0;
+    const dx = e.clientX - dragStartX;
+    const dy = e.clientY - dragStartY;
 
-  const newX = Math.max(
-    0,
-    Math.round(dragOrigX + dx / (props.colWidth + props.gap))
-  );
-  const newY = Math.max(
-    0,
-    Math.round(dragOrigY + dy / (props.rowHeight + props.gap))
-  );
+    const newX = Math.max(
+      0,
+      Math.round(dragOrigX + dx / (props.colWidth + props.gap))
+    );
+    const newY = Math.max(
+      0,
+      Math.round(dragOrigY + dy / (props.rowHeight + props.gap))
+    );
 
-  if (newX !== props.item.x || newY !== props.item.y) {
-    emit("move", props.item, newX, newY);
-  }
+    if (newX !== props.item.x || newY !== props.item.y) {
+      emit("move", props.item, newX, newY);
+    }
+  });
 }
 
 function onDragEnd() {
   isDragging.value = false;
+  if (dragRaf) { cancelAnimationFrame(dragRaf); dragRaf = 0; }
   document.removeEventListener("mousemove", onDragMove);
   document.removeEventListener("mouseup", onDragEnd);
 }
@@ -107,34 +115,41 @@ function onResizeStart(e: MouseEvent) {
 
 function onResizeMove(e: MouseEvent) {
   if (!isResizing.value) return;
+  if (resizeRaf) return;
 
-  const dx = e.clientX - resizeStartX;
-  const dy = e.clientY - resizeStartY;
+  resizeRaf = requestAnimationFrame(() => {
+    resizeRaf = 0;
+    const dx = e.clientX - resizeStartX;
+    const dy = e.clientY - resizeStartY;
 
-  let newW = Math.max(
-    props.item.minW ?? 1,
-    Math.round(resizeOrigW + dx / (props.colWidth + props.gap))
-  );
-  let newH = Math.max(
-    props.item.minH ?? 1,
-    Math.round(resizeOrigH + dy / (props.rowHeight + props.gap))
-  );
+    let newW = Math.max(
+      props.item.minW ?? 1,
+      Math.round(resizeOrigW + dx / (props.colWidth + props.gap))
+    );
+    let newH = Math.max(
+      props.item.minH ?? 1,
+      Math.round(resizeOrigH + dy / (props.rowHeight + props.gap))
+    );
 
-  if (props.item.maxW) newW = Math.min(newW, props.item.maxW);
-  if (props.item.maxH) newH = Math.min(newH, props.item.maxH);
+    if (props.item.maxW) newW = Math.min(newW, props.item.maxW);
+    if (props.item.maxH) newH = Math.min(newH, props.item.maxH);
 
-  if (newW !== props.item.w || newH !== props.item.h) {
-    emit("resize", props.item, newW, newH);
-  }
+    if (newW !== props.item.w || newH !== props.item.h) {
+      emit("resize", props.item, newW, newH);
+    }
+  });
 }
 
 function onResizeEnd() {
   isResizing.value = false;
+  if (resizeRaf) { cancelAnimationFrame(resizeRaf); resizeRaf = 0; }
   document.removeEventListener("mousemove", onResizeMove);
   document.removeEventListener("mouseup", onResizeEnd);
 }
 
 onBeforeUnmount(() => {
+  if (dragRaf) cancelAnimationFrame(dragRaf);
+  if (resizeRaf) cancelAnimationFrame(resizeRaf);
   document.removeEventListener("mousemove", onDragMove);
   document.removeEventListener("mouseup", onDragEnd);
   document.removeEventListener("mousemove", onResizeMove);

@@ -80,20 +80,43 @@ export function useGrid() {
 
   let nextId = 1;
 
-  function createItem(overrides: Partial<LayoutItem> = {}): LayoutItem {
+  function findEmptyPosition(w: number, h: number): { x: number; y: number } {
     const existing = layout.items;
+    const maxCols = columns.value;
+
+    // Scan row by row, column by column for the first fit
+    for (let y = 0; y < 200; y++) {
+      for (let x = 0; x <= maxCols - w; x++) {
+        const candidate: LayoutItem = {
+          moduleId: "",
+          instanceId: "__probe__",
+          x, y, w, h,
+        };
+        if (!checkCollision(candidate, existing)) {
+          return { x, y };
+        }
+      }
+    }
+    // Fallback: place below everything
     let maxY = 0;
     for (const item of existing) {
       maxY = Math.max(maxY, item.y + item.h);
     }
+    return { x: 0, y: maxY };
+  }
+
+  function createItem(overrides: Partial<LayoutItem> = {}): LayoutItem {
+    const w = overrides.w ?? 3;
+    const h = overrides.h ?? 2;
+    const pos = findEmptyPosition(w, h);
 
     return {
       moduleId: "empty",
       instanceId: `cell-${nextId++}-${Date.now()}`,
-      x: 0,
-      y: maxY,
-      w: 3,
-      h: 2,
+      x: pos.x,
+      y: pos.y,
+      w,
+      h,
       ...overrides,
     };
   }
