@@ -92,8 +92,30 @@ fn is_private_ip(ip: IpAddr) -> bool {
                 || v4.is_unspecified()
                 || v4.octets() == [169, 254, 169, 254]
         }
-        IpAddr::V6(v6) => v6.is_loopback() || v6.is_unspecified(),
+        IpAddr::V6(v6) => {
+            v6.is_loopback()
+                || v6.is_unspecified()
+                || is_ipv6_private(v6)
+        }
     }
+}
+
+/// Checks IPv6 private ranges: fc00::/7 (ULA), fe80::/10 (link-local), ::ffff:0:0/96 (v4-mapped)
+fn is_ipv6_private(ip: std::net::Ipv6Addr) -> bool {
+    let octets = ip.octets();
+    // fc00::/7 — Unique Local Address
+    if (octets[0] & 0xfe) == 0xfc {
+        return true;
+    }
+    // fe80::/10 — Link-local
+    if octets[0] == 0xfe && (octets[1] & 0xc0) == 0x80 {
+        return true;
+    }
+    // ::ffff:0:0/96 — IPv4-mapped IPv6 (e.g. ::ffff:127.0.0.1)
+    if octets[0..12] == [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0xff, 0xff] {
+        return true;
+    }
+    false
 }
 
 #[tauri::command]

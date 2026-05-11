@@ -1,4 +1,5 @@
 import { ref, computed } from "vue";
+import { storeToRefs } from "pinia";
 import { useLayoutStore, type LayoutItem } from "../stores/layout";
 import { useSettingsStore } from "../stores/settings";
 
@@ -6,9 +7,7 @@ export function useGrid() {
   const layout = useLayoutStore();
   const settings = useSettingsStore();
 
-  const columns = computed(() => settings.gridColumns);
-  const rowHeight = computed(() => settings.gridRowHeight);
-  const gap = computed(() => settings.gridGap);
+  const { gridColumns: columns, gridRowHeight: rowHeight, gridGap: gap } = storeToRefs(settings);
 
   const containerWidth = ref(0);
   const containerHeight = ref(0);

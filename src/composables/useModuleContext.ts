@@ -58,6 +58,7 @@ export function createModuleContext(
       return invoke<DirEntry[]>("read_dir", { path });
     },
     async openPath(path: string): Promise<void> {
+      checkPermission(manifest, "file:open");
       return invoke("open_path", { path });
     },
     async exec(

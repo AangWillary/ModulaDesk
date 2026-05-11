@@ -35,7 +35,7 @@ function render(ctx: ModuleContext, state: QuickLaunchState) {
     .map(
       (item) => `
     <div class="ql-item" data-id="${escapeHtml(item.id)}" data-url="${escapeHtml(item.url)}" data-type="${escapeHtml(item.type)}">
-      <span class="ql-icon">${item.icon}</span>
+      <span class="ql-icon">${escapeHtml(item.icon)}</span>
       <span class="ql-name">${escapeHtml(item.name)}</span>
       <button class="ql-del" data-id="${escapeHtml(item.id)}">×</button>
     </div>

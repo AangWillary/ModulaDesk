@@ -59,11 +59,13 @@ async function mountEmbeddedModule(manifest: Manifest) {
     </div>
   `;
 
-  // Launch process if needed
+  // Launch process if needed — requires system:shell permission in manifest
   if (config.launchCommand) {
+    if (!manifest.permissions.includes("system:shell")) {
+      throw new Error("Embedded module with launchCommand requires 'system:shell' permission");
+    }
     try {
       await invoke("exec_command", { command: config.launchCommand });
-      // Wait a bit for the window to appear
       await new Promise((r) => setTimeout(r, 1500));
     } catch {
       // Process may already be running

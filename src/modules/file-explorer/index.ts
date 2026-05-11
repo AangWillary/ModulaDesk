@@ -35,17 +35,31 @@ function formatSize(bytes: number): string {
   return `${(bytes / Math.pow(1024, i)).toFixed(i > 0 ? 1 : 0)} ${units[i]}`;
 }
 
+function isWindowsPath(path: string): boolean {
+  return path.includes("\\") || /^[A-Z]:/i.test(path);
+}
+
+function getParentPath(path: string): string {
+  const parts = path.split(/[/\\]/).filter(Boolean);
+  if (parts.length <= 1) return path;
+  parts.pop();
+  return isWindowsPath(path) ? parts.join("\\") : "/" + parts.join("/");
+}
+
 function renderBreadcrumb(path: string) {
   const parts = path.split(/[/\\]/).filter(Boolean);
-  const isWin = path.includes("\\") || path.match(/^[A-Z]:/);
+  const isWin = isWindowsPath(path);
+  const sep = isWin ? "\\" : "/";
 
   let html = '<div class="fe-breadcrumb">';
-  html += `<span class="fe-crumb" data-path="${escapeHtml(isWin ? parts[0] + "\\" : "/")}">🏠</span>`;
+  html += `<span class="fe-crumb" data-path="${escapeHtml(isWin ? parts[0] + sep : "/")}">🏠</span>`;
 
-  let accumulated = isWin ? parts[0] + "\\" : "/";
+  let accumulated = isWin ? parts[0] + sep : "/";
   for (let i = isWin ? 1 : 0; i < parts.length; i++) {
-    accumulated += (isWin && i > 0 ? "\\" : isWin ? "" : "/") + parts[i];
-    if (i === 0 && isWin) accumulated = parts[0] + "\\";
+    if (i > 0 || !isWin) {
+      accumulated += (i > 0 ? sep : "") + parts[i];
+    }
+    if (i === 0 && isWin) accumulated = parts[0] + sep;
     html += `<span class="fe-sep">›</span>`;
     html += `<span class="fe-crumb" data-path="${escapeHtml(accumulated)}">${escapeHtml(parts[i])}</span>`;
   }
@@ -54,10 +68,9 @@ function renderBreadcrumb(path: string) {
 }
 
 function renderFileList(entries: DirEntry[], searchFilter: string) {
+  const filterLower = searchFilter.toLowerCase();
   const filtered = searchFilter
-    ? entries.filter((e) =>
-        e.name.toLowerCase().includes(searchFilter.toLowerCase())
-      )
+    ? entries.filter((e) => e.name.toLowerCase().includes(filterLower))
     : entries;
 
   let html = '<div class="fe-list">';
@@ -135,12 +148,10 @@ function render(ctx: ModuleContext, state: ExplorerState) {
   `;
 
   container.querySelector("#fe-back")?.addEventListener("click", () => {
-    const parts = state.currentPath.split(/[/\\]/).filter(Boolean);
-    if (parts.length <= 1) return;
-    const isWin = state.currentPath.includes("\\") || state.currentPath.match(/^[A-Z]:/);
-    parts.pop();
-    const parent = isWin ? parts.join("\\") : "/" + parts.join("/");
-    navigate(ctx, state, parent);
+    const parent = getParentPath(state.currentPath);
+    if (parent !== state.currentPath) {
+      navigate(ctx, state, parent);
+    }
   });
 
   container.querySelector("#fe-search")?.addEventListener("input", (e) => {
