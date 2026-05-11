@@ -63,6 +63,7 @@ pub fn set_tool_window(hwnd: isize) {
 }
 
 /// Enable or disable click-through
+#[allow(dead_code)]
 #[cfg(windows)]
 pub fn set_click_through(hwnd: isize, enable: bool) {
     unsafe {

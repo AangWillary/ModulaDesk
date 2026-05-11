@@ -1,5 +1,3 @@
-use std::path::{Path, PathBuf};
-
 use super::path_util::validate_path;
 
 #[tauri::command]

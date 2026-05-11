@@ -12,6 +12,5 @@ pub use dir_ops::*;
 pub use embed::*;
 pub use file_ops::*;
 pub use http::*;
-pub use process::CommandResult;
 pub use process::*;
 pub use system_info::*;

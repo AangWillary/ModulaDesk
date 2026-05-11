@@ -14,7 +14,6 @@ mod win32 {
     #![allow(non_snake_case, dead_code)]
 
     use std::ffi::c_void;
-    use std::ptr;
 
     pub type HWND = *mut c_void;
     pub type BOOL = i32;
