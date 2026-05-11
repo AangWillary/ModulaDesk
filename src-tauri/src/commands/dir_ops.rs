@@ -1,5 +1,7 @@
 use serde::Serialize;
 
+use super::path_util::validate_path;
+
 #[derive(Serialize)]
 pub struct DirEntry {
     pub name: String,
@@ -11,7 +13,8 @@ pub struct DirEntry {
 
 #[tauri::command]
 pub fn read_dir(path: String) -> Result<Vec<DirEntry>, String> {
-    let entries = std::fs::read_dir(&path).map_err(|e| e.to_string())?;
+    let canonical = validate_path(&path)?;
+    let entries = std::fs::read_dir(&canonical).map_err(|e| e.to_string())?;
 
     let mut result = Vec::new();
     for entry in entries {
@@ -51,5 +54,6 @@ pub fn read_dir(path: String) -> Result<Vec<DirEntry>, String> {
 
 #[tauri::command]
 pub fn open_path(path: String) -> Result<(), String> {
-    opener::open(&path).map_err(|e| e.to_string())
+    let canonical = validate_path(&path)?;
+    opener::open(&canonical).map_err(|e| e.to_string())
 }

@@ -171,7 +171,9 @@ onMounted(() => {
 // Detach embedded window synchronously before DOM is destroyed
 onBeforeUnmount(() => {
   if (embeddedHwnd !== null) {
-    invoke("detach_window", { targetHwnd: embeddedHwnd }).catch(() => {});
+    invoke("detach_window", { targetHwnd: embeddedHwnd }).catch((e) =>
+      console.warn("[ModuleLoader] detach failed (window may already be closed):", e)
+    );
     embeddedHwnd = null;
   }
 });

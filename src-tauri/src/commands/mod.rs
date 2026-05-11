@@ -3,6 +3,7 @@ mod dir_ops;
 mod embed;
 mod file_ops;
 mod http;
+pub(crate) mod path_util;
 mod process;
 mod system_info;
 

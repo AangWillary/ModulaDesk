@@ -22,19 +22,16 @@ export const useLayoutStore = defineStore("layout", () => {
 
   function addItem(item: LayoutItem) {
     items.value.push(item);
-    saveToStorage();
   }
 
   function removeItem(instanceId: string) {
     items.value = items.value.filter((i) => i.instanceId !== instanceId);
-    saveToStorage();
   }
 
   function updateItem(instanceId: string, updates: Partial<LayoutItem>) {
     const item = items.value.find((i) => i.instanceId === instanceId);
     if (item) {
       Object.assign(item, updates);
-      saveToStorage();
     }
   }
 

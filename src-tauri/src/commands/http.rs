@@ -1,21 +1,17 @@
 use std::net::IpAddr;
 
 /// Extracts the host from a URL string without the `url` crate.
-/// Handles: scheme://host:port/path?query
-fn extract_host(url: &str) -> Result<(String, String), String> {
-    // Check scheme
-    let (scheme, rest) = if let Some(pos) = url.find("://") {
-        let scheme = &url[..pos];
-        (scheme.to_string(), &url[pos + 3..])
-    } else {
-        return Err("URL must have a scheme (http:// or https://)".to_string());
-    };
+fn extract_host(url: &str) -> Result<String, String> {
+    let rest = url
+        .find("://")
+        .map(|pos| &url[pos + 3..])
+        .ok_or_else(|| "URL must have a scheme (http:// or https://)".to_string())?;
 
+    let scheme = &url[..url.find("://").unwrap()];
     if scheme != "http" && scheme != "https" {
         return Err(format!("URL scheme '{}' is not allowed", scheme));
     }
 
-    // Extract host (before /, ?, #, :)
     let host_end = rest
         .find(|c: char| c == '/' || c == '?' || c == '#' || c == ':')
         .unwrap_or(rest.len());
@@ -32,12 +28,12 @@ fn extract_host(url: &str) -> Result<(String, String), String> {
         host
     };
 
-    Ok((scheme, host_clean.to_string()))
+    Ok(host_clean.to_string())
 }
 
 /// Checks if a URL is safe to request (no SSRF to internal/private IPs).
 fn validate_url(url: &str) -> Result<(), String> {
-    let (_scheme, host) = extract_host(url)?;
+    let host = extract_host(url)?;
 
     // Block localhost variants
     let blocked_hosts = ["localhost", "127.0.0.1", "::1", "0.0.0.0"];
@@ -45,23 +41,41 @@ fn validate_url(url: &str) -> Result<(), String> {
         return Err("Requests to localhost are not allowed".to_string());
     }
 
-    // Try to resolve and check for private IPs
+    // Check for private IPs
     if let Ok(ip) = host.parse::<IpAddr>() {
         if is_private_ip(ip) {
             return Err("Requests to private/internal IPs are not allowed".to_string());
         }
     }
 
-    // Block common internal hostnames
+    // Block internal hostnames using suffix matching (not substring)
     let host_lower = host.to_lowercase();
-    let blocked_patterns = [
-        ".local", ".internal", ".localhost", ".home", ".lan",
-        "169.254.",       // AWS metadata
-        "metadata.google", // GCP metadata
+    let blocked_suffixes = [
+        ".local", ".internal", ".localhost", ".home.arpa", ".lan",
     ];
-    for pattern in &blocked_patterns {
-        if host_lower.contains(pattern) {
-            return Err("Requests to internal hosts are not allowed".to_string());
+    for suffix in &blocked_suffixes {
+        if host_lower.ends_with(suffix) {
+            return Err(format!(
+                "Requests to '{}' domains are not allowed",
+                suffix
+            ));
+        }
+    }
+
+    // Block specific IP ranges in hostname form
+    if host_lower.starts_with("169.254.") {
+        return Err("Requests to link-local addresses are not allowed".to_string());
+    }
+
+    // Block metadata endpoints by exact hostname
+    let blocked_exact = [
+        "metadata.google.internal",
+        "metadata.google.com",
+        "instance-data",
+    ];
+    for blocked in &blocked_exact {
+        if host_lower == *blocked {
+            return Err("Requests to cloud metadata endpoints are not allowed".to_string());
         }
     }
 
