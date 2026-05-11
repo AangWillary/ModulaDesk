@@ -1,23 +1,47 @@
 use std::net::IpAddr;
 
-/// Checks if a URL is safe to request (no SSRF to internal/private IPs).
-fn validate_url(url: &str) -> Result<(), String> {
-    let parsed = url::Url::parse(url).map_err(|e| format!("Invalid URL: {}", e))?;
+/// Extracts the host from a URL string without the `url` crate.
+/// Handles: scheme://host:port/path?query
+fn extract_host(url: &str) -> Result<(String, String), String> {
+    // Check scheme
+    let (scheme, rest) = if let Some(pos) = url.find("://") {
+        let scheme = &url[..pos];
+        (scheme.to_string(), &url[pos + 3..])
+    } else {
+        return Err("URL must have a scheme (http:// or https://)".to_string());
+    };
 
-    // Only allow http and https
-    let scheme = parsed.scheme();
     if scheme != "http" && scheme != "https" {
         return Err(format!("URL scheme '{}' is not allowed", scheme));
     }
 
-    // Check host
-    let host = parsed
-        .host_str()
-        .ok_or_else(|| "URL has no host".to_string())?;
+    // Extract host (before /, ?, #, :)
+    let host_end = rest
+        .find(|c: char| c == '/' || c == '?' || c == '#' || c == ':')
+        .unwrap_or(rest.len());
+    let host = &rest[..host_end];
+
+    if host.is_empty() {
+        return Err("URL has no host".to_string());
+    }
+
+    // Handle IPv6 brackets: [::1]
+    let host_clean = if host.starts_with('[') && host.ends_with(']') {
+        &host[1..host.len() - 1]
+    } else {
+        host
+    };
+
+    Ok((scheme, host_clean.to_string()))
+}
+
+/// Checks if a URL is safe to request (no SSRF to internal/private IPs).
+fn validate_url(url: &str) -> Result<(), String> {
+    let (_scheme, host) = extract_host(url)?;
 
     // Block localhost variants
-    let blocked_hosts = ["localhost", "127.0.0.1", "::1", "0.0.0.0", "[::1]"];
-    if blocked_hosts.contains(&host) {
+    let blocked_hosts = ["localhost", "127.0.0.1", "::1", "0.0.0.0"];
+    if blocked_hosts.contains(&host.as_str()) {
         return Err("Requests to localhost are not allowed".to_string());
     }
 
@@ -32,8 +56,8 @@ fn validate_url(url: &str) -> Result<(), String> {
     let host_lower = host.to_lowercase();
     let blocked_patterns = [
         ".local", ".internal", ".localhost", ".home", ".lan",
-        "169.254.",  // AWS metadata
-        "metadata.google",  // GCP metadata
+        "169.254.",       // AWS metadata
+        "metadata.google", // GCP metadata
     ];
     for pattern in &blocked_patterns {
         if host_lower.contains(pattern) {
@@ -52,7 +76,6 @@ fn is_private_ip(ip: IpAddr) -> bool {
                 || v4.is_link_local()
                 || v4.is_broadcast()
                 || v4.is_unspecified()
-                // Block AWS/GCP metadata endpoint
                 || v4.octets() == [169, 254, 169, 254]
         }
         IpAddr::V6(v6) => v6.is_loopback() || v6.is_unspecified(),
