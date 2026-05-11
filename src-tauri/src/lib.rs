@@ -1,5 +1,6 @@
 mod commands;
 mod core;
+mod types;
 
 use core::window;
 use tauri::Manager;
