@@ -19,11 +19,12 @@ function checkPermission(manifest: Manifest, perm: string): void {
 
 export function createModuleContext(
   moduleId: string,
+  instanceId: string,
   container: HTMLElement,
   manifest: Manifest,
   settings: Record<string, unknown> = {}
 ): ModuleContext {
-  const storageKey = (key: string) => `${STORAGE_PREFIX}${moduleId}:${key}`;
+  const storageKey = (key: string) => `${STORAGE_PREFIX}${moduleId}:${instanceId}:${key}`;
 
   const storage: ModuleContext["storage"] = {
     async get<T>(key: string): Promise<T | undefined> {
@@ -81,6 +82,7 @@ export function createModuleContext(
 
   return {
     moduleId,
+    instanceId,
     container,
     settings,
     storage,

@@ -1,11 +1,14 @@
 import { ref, computed } from "vue";
 import { useLayoutStore, type LayoutItem } from "../stores/layout";
+import { useSettingsStore } from "../stores/settings";
 
 export function useGrid() {
   const layout = useLayoutStore();
-  const columns = ref(12);
-  const rowHeight = ref(100);
-  const gap = ref(8);
+  const settings = useSettingsStore();
+
+  const columns = computed(() => settings.gridColumns);
+  const rowHeight = computed(() => settings.gridRowHeight);
+  const gap = computed(() => settings.gridGap);
 
   const containerWidth = ref(0);
   const containerHeight = ref(0);

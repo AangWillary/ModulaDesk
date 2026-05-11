@@ -1,12 +1,13 @@
 import type { Module, ModuleContext, DirEntry } from "../../types/module";
+import { escapeHtml } from "../../utils/html";
 
-let currentPath = "";
-let currentEntries: DirEntry[] = [];
-let searchFilter = "";
-let ctxRef: ModuleContext | null = null;
+interface ExplorerState {
+  currentPath: string;
+  entries: DirEntry[];
+  searchFilter: string;
+}
 
 function getDesktopPath(): string {
-  // Default to home directory; Tauri's read_dir will resolve it
   const isWin = navigator.platform?.toLowerCase().includes("win");
   return isWin ? "C:\\Users" : "/";
 }
@@ -15,45 +16,14 @@ function getFileIcon(entry: DirEntry): string {
   if (entry.isDir) return "📁";
   const ext = entry.name.split(".").pop()?.toLowerCase() || "";
   const iconMap: Record<string, string> = {
-    pdf: "📕",
-    doc: "📘",
-    docx: "📘",
-    xls: "📗",
-    xlsx: "📗",
-    ppt: "📙",
-    pptx: "📙",
-    jpg: "🖼️",
-    jpeg: "🖼️",
-    png: "🖼️",
-    gif: "🖼️",
-    svg: "🖼️",
-    mp3: "🎵",
-    wav: "🎵",
-    flac: "🎵",
-    mp4: "🎬",
-    avi: "🎬",
-    mkv: "🎬",
-    mov: "🎬",
-    zip: "📦",
-    rar: "📦",
-    "7z": "📦",
-    tar: "📦",
-    gz: "📦",
-    exe: "⚙️",
-    msi: "⚙️",
-    bat: "⚙️",
-    sh: "⚙️",
-    js: "📜",
-    ts: "📜",
-    py: "📜",
-    rs: "📜",
-    html: "🌐",
-    css: "🌐",
-    json: "📋",
-    xml: "📋",
-    md: "📝",
-    txt: "📝",
-    log: "📝",
+    pdf: "📕", doc: "📘", docx: "📘", xls: "📗", xlsx: "📗",
+    ppt: "📙", pptx: "📙", jpg: "🖼️", jpeg: "🖼️", png: "🖼️",
+    gif: "🖼️", svg: "🖼️", mp3: "🎵", wav: "🎵", flac: "🎵",
+    mp4: "🎬", avi: "🎬", mkv: "🎬", mov: "🎬", zip: "📦",
+    rar: "📦", "7z": "📦", tar: "📦", gz: "📦", exe: "⚙️",
+    msi: "⚙️", bat: "⚙️", sh: "⚙️", js: "📜", ts: "📜",
+    py: "📜", rs: "📜", html: "🌐", css: "🌐", json: "📋",
+    xml: "📋", md: "📝", txt: "📝", log: "📝",
   };
   return iconMap[ext] || "📄";
 }
@@ -65,39 +35,39 @@ function formatSize(bytes: number): string {
   return `${(bytes / Math.pow(1024, i)).toFixed(i > 0 ? 1 : 0)} ${units[i]}`;
 }
 
-function renderBreadcrumb() {
-  const parts = currentPath.split(/[/\\]/).filter(Boolean);
-  const isWin = currentPath.includes("\\") || currentPath.match(/^[A-Z]:/);
+function renderBreadcrumb(path: string) {
+  const parts = path.split(/[/\\]/).filter(Boolean);
+  const isWin = path.includes("\\") || path.match(/^[A-Z]:/);
 
   let html = '<div class="fe-breadcrumb">';
-  html += `<span class="fe-crumb" data-path="${isWin ? parts[0] + "\\" : "/"}">🏠</span>`;
+  html += `<span class="fe-crumb" data-path="${escapeHtml(isWin ? parts[0] + "\\" : "/")}">🏠</span>`;
 
   let accumulated = isWin ? parts[0] + "\\" : "/";
   for (let i = isWin ? 1 : 0; i < parts.length; i++) {
     accumulated += (isWin && i > 0 ? "\\" : isWin ? "" : "/") + parts[i];
     if (i === 0 && isWin) accumulated = parts[0] + "\\";
     html += `<span class="fe-sep">›</span>`;
-    html += `<span class="fe-crumb" data-path="${accumulated}">${parts[i]}</span>`;
+    html += `<span class="fe-crumb" data-path="${escapeHtml(accumulated)}">${escapeHtml(parts[i])}</span>`;
   }
   html += "</div>";
   return html;
 }
 
-function renderFileList() {
+function renderFileList(entries: DirEntry[], searchFilter: string) {
   const filtered = searchFilter
-    ? currentEntries.filter((e) =>
+    ? entries.filter((e) =>
         e.name.toLowerCase().includes(searchFilter.toLowerCase())
       )
-    : currentEntries;
+    : entries;
 
   let html = '<div class="fe-list">';
   if (filtered.length === 0) {
     html += '<div class="fe-empty">空文件夹</div>';
   } else {
     for (const entry of filtered) {
-      html += `<div class="fe-item" data-path="${entry.path}" data-isdir="${entry.isDir}">`;
+      html += `<div class="fe-item" data-path="${escapeHtml(entry.path)}" data-isdir="${entry.isDir}">`;
       html += `<span class="fe-icon">${getFileIcon(entry)}</span>`;
-      html += `<span class="fe-name" title="${entry.name}">${entry.name}</span>`;
+      html += `<span class="fe-name" title="${escapeHtml(entry.name)}">${escapeHtml(entry.name)}</span>`;
       html += `<span class="fe-size">${entry.isDir ? "" : formatSize(entry.size)}</span>`;
       html += `<span class="fe-time">${entry.modified || ""}</span>`;
       html += "</div>";
@@ -107,19 +77,18 @@ function renderFileList() {
   return html;
 }
 
-async function navigate(path: string) {
-  if (!ctxRef) return;
+async function navigate(ctx: ModuleContext, state: ExplorerState, path: string) {
   try {
-    currentPath = path;
-    currentEntries = await ctxRef.system.readDir(path);
-    searchFilter = "";
-    render(ctxRef);
+    state.currentPath = path;
+    state.entries = await ctx.system.readDir(path);
+    state.searchFilter = "";
+    render(ctx, state);
   } catch (e) {
     console.error(`[file-explorer] Failed to navigate to ${path}:`, e);
   }
 }
 
-function render(ctx: ModuleContext) {
+function render(ctx: ModuleContext, state: ExplorerState) {
   const { container } = ctx;
 
   container.innerHTML = `
@@ -127,10 +96,10 @@ function render(ctx: ModuleContext) {
       <div class="fe-toolbar">
         <button class="fe-btn" id="fe-back">← 返回</button>
         <input class="fe-search" id="fe-search" type="text"
-               placeholder="搜索..." value="${searchFilter}" />
+               placeholder="搜索..." value="${escapeHtml(state.searchFilter)}" />
       </div>
-      ${renderBreadcrumb()}
-      ${renderFileList()}
+      ${renderBreadcrumb(state.currentPath)}
+      ${renderFileList(state.entries, state.searchFilter)}
     </div>
     <style>
       .fe-root { display:flex; flex-direction:column; height:100%;
@@ -166,17 +135,17 @@ function render(ctx: ModuleContext) {
   `;
 
   container.querySelector("#fe-back")?.addEventListener("click", () => {
-    const parts = currentPath.split(/[/\\]/).filter(Boolean);
+    const parts = state.currentPath.split(/[/\\]/).filter(Boolean);
     if (parts.length <= 1) return;
-    const isWin = currentPath.includes("\\") || currentPath.match(/^[A-Z]:/);
+    const isWin = state.currentPath.includes("\\") || state.currentPath.match(/^[A-Z]:/);
     parts.pop();
     const parent = isWin ? parts.join("\\") : "/" + parts.join("/");
-    navigate(parent);
+    navigate(ctx, state, parent);
   });
 
   container.querySelector("#fe-search")?.addEventListener("input", (e) => {
-    searchFilter = (e.target as HTMLInputElement).value;
-    render(ctx);
+    state.searchFilter = (e.target as HTMLInputElement).value;
+    render(ctx, state);
   });
 
   container.querySelectorAll(".fe-item").forEach((el) => {
@@ -184,7 +153,7 @@ function render(ctx: ModuleContext) {
       const path = el.getAttribute("data-path") || "";
       const isDir = el.getAttribute("data-isdir") === "true";
       if (isDir) {
-        navigate(path);
+        navigate(ctx, state, path);
       } else {
         ctx.system.openPath(path);
       }
@@ -194,35 +163,34 @@ function render(ctx: ModuleContext) {
   container.querySelectorAll(".fe-crumb").forEach((el) => {
     el.addEventListener("click", () => {
       const path = el.getAttribute("data-path") || "";
-      navigate(path);
+      navigate(ctx, state, path);
     });
   });
 }
 
 const fileExplorer: Module = {
   async onInit(ctx: ModuleContext) {
-    console.log(`[file-explorer] onInit called, moduleId=${ctx.moduleId}`);
+    console.log(`[file-explorer] onInit called, moduleId=${ctx.moduleId}, instanceId=${ctx.instanceId}`);
   },
 
   async onMount(ctx: ModuleContext) {
     console.log(`[file-explorer] onMount called`);
-    ctxRef = ctx;
-
+    const state: ExplorerState = {
+      currentPath: "",
+      entries: [],
+      searchFilter: "",
+    };
     const startPath =
       (ctx.settings.startPath as string) || getDesktopPath();
-    await navigate(startPath);
+    await navigate(ctx, state, startPath);
   },
 
   async onUnmount() {
     console.log("[file-explorer] onUnmount called");
-    ctxRef = null;
   },
 
   async onDestroy() {
     console.log("[file-explorer] onDestroy called");
-    currentPath = "";
-    currentEntries = [];
-    searchFilter = "";
   },
 };
 

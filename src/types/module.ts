@@ -54,6 +54,7 @@ export interface DirEntry {
 
 export interface ModuleContext {
   readonly moduleId: string;
+  readonly instanceId: string;
   readonly container: HTMLElement;
   readonly settings: Record<string, unknown>;
   storage: {

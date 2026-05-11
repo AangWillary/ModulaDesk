@@ -1,4 +1,5 @@
 import type { Module, ModuleContext } from "../../types/module";
+import { escapeHtml, genId } from "../../utils/html";
 
 interface LaunchItem {
   id: string;
@@ -8,35 +9,35 @@ interface LaunchItem {
   type: "url" | "path";
 }
 
-let items: LaunchItem[] = [];
-let showAdd = false;
-
-function genId(): string {
-  return Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+interface QuickLaunchState {
+  items: LaunchItem[];
+  showAdd: boolean;
 }
 
-async function loadItems(ctx: ModuleContext) {
-  const saved = await ctx.storage.get<LaunchItem[]>("items");
-  items = saved || [
-    { id: "gh", name: "GitHub", icon: "🐙", url: "https://github.com", type: "url" },
-    { id: "yt", name: "YouTube", icon: "▶️", url: "https://youtube.com", type: "url" },
-  ];
+async function loadItems(ctx: ModuleContext): Promise<LaunchItem[]> {
+  return (
+    (await ctx.storage.get<LaunchItem[]>("items")) || [
+      { id: "gh", name: "GitHub", icon: "🐙", url: "https://github.com", type: "url" },
+      { id: "yt", name: "YouTube", icon: "▶️", url: "https://youtube.com", type: "url" },
+    ]
+  );
 }
 
-async function saveItems(ctx: ModuleContext) {
+async function saveItems(ctx: ModuleContext, items: LaunchItem[]) {
   await ctx.storage.set("items", items);
 }
 
-function render(ctx: ModuleContext) {
+function render(ctx: ModuleContext, state: QuickLaunchState) {
   const { container } = ctx;
+  const { items, showAdd } = state;
 
   const gridHtml = items
     .map(
       (item) => `
-    <div class="ql-item" data-id="${item.id}" data-url="${item.url}" data-type="${item.type}">
+    <div class="ql-item" data-id="${escapeHtml(item.id)}" data-url="${escapeHtml(item.url)}" data-type="${escapeHtml(item.type)}">
       <span class="ql-icon">${item.icon}</span>
-      <span class="ql-name">${item.name}</span>
-      <button class="ql-del" data-id="${item.id}">×</button>
+      <span class="ql-name">${escapeHtml(item.name)}</span>
+      <button class="ql-del" data-id="${escapeHtml(item.id)}">×</button>
     </div>
   `
     )
@@ -111,20 +112,20 @@ function render(ctx: ModuleContext) {
     el.addEventListener("click", async (e) => {
       e.stopPropagation();
       const id = (e.target as HTMLElement).getAttribute("data-id");
-      items = items.filter((i) => i.id !== id);
-      await saveItems(ctx);
-      render(ctx);
+      state.items = state.items.filter((i) => i.id !== id);
+      await saveItems(ctx, state.items);
+      render(ctx, state);
     });
   });
 
   container.querySelector("#ql-add")?.addEventListener("click", () => {
-    showAdd = true;
-    render(ctx);
+    state.showAdd = true;
+    render(ctx, state);
   });
 
   container.querySelector("#ql-cancel")?.addEventListener("click", () => {
-    showAdd = false;
-    render(ctx);
+    state.showAdd = false;
+    render(ctx, state);
   });
 
   container.querySelector("#ql-confirm")?.addEventListener("click", async () => {
@@ -135,28 +136,29 @@ function render(ctx: ModuleContext) {
     if (!name || !url) return;
 
     const isUrl = url.startsWith("http://") || url.startsWith("https://");
-    items.push({
+    state.items.push({
       id: genId(),
       name,
       icon: isUrl ? "🌐" : "📄",
       url,
       type: isUrl ? "url" : "path",
     });
-    await saveItems(ctx);
-    showAdd = false;
-    render(ctx);
+    await saveItems(ctx, state.items);
+    state.showAdd = false;
+    render(ctx, state);
   });
 }
 
 const quickLaunch: Module = {
   async onInit(ctx: ModuleContext) {
-    console.log(`[quick-launch] onInit called, moduleId=${ctx.moduleId}`);
+    console.log(`[quick-launch] onInit called, moduleId=${ctx.moduleId}, instanceId=${ctx.instanceId}`);
   },
 
   async onMount(ctx: ModuleContext) {
     console.log(`[quick-launch] onMount called`);
-    await loadItems(ctx);
-    render(ctx);
+    const items = await loadItems(ctx);
+    const state: QuickLaunchState = { items, showAdd: false };
+    render(ctx, state);
   },
 
   async onUnmount() {
@@ -165,8 +167,6 @@ const quickLaunch: Module = {
 
   async onDestroy() {
     console.log("[quick-launch] onDestroy called");
-    items = [];
-    showAdd = false;
   },
 };
 

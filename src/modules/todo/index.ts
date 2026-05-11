@@ -1,4 +1,5 @@
 import type { Module, ModuleContext } from "../../types/module";
+import { escapeHtml, genId } from "../../utils/html";
 
 interface TodoItem {
   id: string;
@@ -6,22 +7,15 @@ interface TodoItem {
   done: boolean;
 }
 
-let todos: TodoItem[] = [];
-
-function genId(): string {
-  return Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+async function loadTodos(ctx: ModuleContext): Promise<TodoItem[]> {
+  return (await ctx.storage.get<TodoItem[]>("todos")) || [];
 }
 
-async function loadTodos(ctx: ModuleContext) {
-  const saved = await ctx.storage.get<TodoItem[]>("todos");
-  todos = saved || [];
-}
-
-async function saveTodos(ctx: ModuleContext) {
+async function saveTodos(ctx: ModuleContext, todos: TodoItem[]) {
   await ctx.storage.set("todos", todos);
 }
 
-function render(ctx: ModuleContext) {
+function render(ctx: ModuleContext, todos: TodoItem[]) {
   const { container } = ctx;
 
   const listHtml = todos
@@ -29,7 +23,7 @@ function render(ctx: ModuleContext) {
       (t) => `
     <div class="todo-item" data-id="${t.id}">
       <input type="checkbox" class="todo-check" ${t.done ? "checked" : ""} />
-      <span class="todo-text ${t.done ? "todo-done" : ""}">${t.text}</span>
+      <span class="todo-text ${t.done ? "todo-done" : ""}">${escapeHtml(t.text)}</span>
       <button class="todo-del" data-id="${t.id}">×</button>
     </div>
   `
@@ -74,8 +68,8 @@ function render(ctx: ModuleContext) {
   input?.addEventListener("keydown", async (e) => {
     if (e.key === "Enter" && input.value.trim()) {
       todos.push({ id: genId(), text: input.value.trim(), done: false });
-      await saveTodos(ctx);
-      render(ctx);
+      await saveTodos(ctx, todos);
+      render(ctx, todos);
     }
   });
 
@@ -85,8 +79,8 @@ function render(ctx: ModuleContext) {
       const item = todos.find((t) => t.id === id);
       if (item) {
         item.done = (e.target as HTMLInputElement).checked;
-        await saveTodos(ctx);
-        render(ctx);
+        await saveTodos(ctx, todos);
+        render(ctx, todos);
       }
     });
   });
@@ -94,22 +88,22 @@ function render(ctx: ModuleContext) {
   container.querySelectorAll(".todo-del").forEach((el) => {
     el.addEventListener("click", async (e) => {
       const id = (e.target as HTMLElement).getAttribute("data-id");
-      todos = todos.filter((t) => t.id !== id);
-      await saveTodos(ctx);
-      render(ctx);
+      const filtered = todos.filter((t) => t.id !== id);
+      await saveTodos(ctx, filtered);
+      render(ctx, filtered);
     });
   });
 }
 
 const todoModule: Module = {
   async onInit(ctx: ModuleContext) {
-    console.log(`[todo] onInit called, moduleId=${ctx.moduleId}`);
+    console.log(`[todo] onInit called, moduleId=${ctx.moduleId}, instanceId=${ctx.instanceId}`);
   },
 
   async onMount(ctx: ModuleContext) {
     console.log(`[todo] onMount called`);
-    await loadTodos(ctx);
-    render(ctx);
+    const todos = await loadTodos(ctx);
+    render(ctx, todos);
   },
 
   async onUnmount() {
@@ -118,7 +112,6 @@ const todoModule: Module = {
 
   async onDestroy() {
     console.log("[todo] onDestroy called");
-    todos = [];
   },
 };
 

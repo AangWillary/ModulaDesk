@@ -32,7 +32,10 @@ export const useLayoutStore = defineStore("layout", () => {
 
   function updateItem(instanceId: string, updates: Partial<LayoutItem>) {
     const item = items.value.find((i) => i.instanceId === instanceId);
-    if (item) Object.assign(item, updates);
+    if (item) {
+      Object.assign(item, updates);
+      saveToStorage();
+    }
   }
 
   function saveToStorage() {

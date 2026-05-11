@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, onBeforeUnmount, watch } from "vue";
+import { ref, onMounted, onBeforeUnmount, onUnmounted, watch } from "vue";
 import type { LayoutItem } from "../stores/layout";
 import type { Module, ModuleContext, Manifest } from "../types/module";
 import { useModuleStore } from "../stores/modules";
@@ -26,6 +26,7 @@ async function mountWebModule(manifest: Manifest) {
 
   ctx = createModuleContext(
     props.item.moduleId,
+    props.item.instanceId,
     containerRef.value,
     manifest
   );
@@ -143,40 +144,6 @@ async function mountModule() {
   }
 }
 
-async function unmountModule() {
-  if (embeddedHwnd !== null) {
-    try {
-      await invoke("detach_window", { targetHwnd: embeddedHwnd });
-    } catch (e) {
-      console.error("[ModuleLoader] detach error:", e);
-    }
-    embeddedHwnd = null;
-    return;
-  }
-
-  if (moduleInstance?.onUnmount) {
-    try {
-      await moduleInstance.onUnmount();
-    } catch (e) {
-      console.error("[ModuleLoader] onUnmount error:", e);
-    }
-  }
-}
-
-async function destroyModule() {
-  if (moduleInstance?.onDestroy) {
-    try {
-      await moduleInstance.onDestroy();
-    } catch (e) {
-      console.error("[ModuleLoader] onDestroy error:", e);
-    }
-  }
-  moduleStore.removeInstance(props.item.instanceId);
-  moduleInstance = null;
-  ctx = null;
-  initialized = false;
-}
-
 // Resize embedded window when grid cell size changes
 watch(
   () => [props.item.w, props.item.h],
@@ -201,8 +168,30 @@ onMounted(() => {
   mountModule();
 });
 
+// Detach embedded window synchronously before DOM is destroyed
 onBeforeUnmount(() => {
-  unmountModule().then(() => destroyModule());
+  if (embeddedHwnd !== null) {
+    invoke("detach_window", { targetHwnd: embeddedHwnd }).catch(() => {});
+    embeddedHwnd = null;
+  }
+});
+
+// Run module lifecycle cleanup after DOM is unmounted
+onUnmounted(() => {
+  if (moduleInstance?.onUnmount) {
+    moduleInstance.onUnmount().catch((e) =>
+      console.error("[ModuleLoader] onUnmount error:", e)
+    );
+  }
+  if (moduleInstance?.onDestroy) {
+    moduleInstance.onDestroy().catch((e) =>
+      console.error("[ModuleLoader] onDestroy error:", e)
+    );
+  }
+  moduleStore.removeInstance(props.item.instanceId);
+  moduleInstance = null;
+  ctx = null;
+  initialized = false;
 });
 </script>
 
