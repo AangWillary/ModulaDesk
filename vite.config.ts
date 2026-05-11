@@ -1,5 +1,6 @@
 import { defineConfig } from "vite";
 import vue from "@vitejs/plugin-vue";
+import path from "path";
 
 // @ts-expect-error process is a nodejs global
 const host = process.env.TAURI_DEV_HOST;
@@ -7,6 +8,19 @@ const host = process.env.TAURI_DEV_HOST;
 // https://vite.dev/config/
 export default defineConfig(async () => ({
   plugins: [vue()],
+
+  resolve: {
+    alias: {
+      "@core": path.resolve(__dirname, "src/core"),
+      "@host": path.resolve(__dirname, "src/host"),
+      "@layout": path.resolve(__dirname, "src/layout"),
+      "@shell": path.resolve(__dirname, "src/shell"),
+      "@ui": path.resolve(__dirname, "src/ui"),
+      "@modules": path.resolve(__dirname, "src/modules"),
+      "@stores": path.resolve(__dirname, "src/stores"),
+      "@app": path.resolve(__dirname, "src/app"),
+    },
+  },
 
   // Vite options tailored for Tauri development and only applied in `tauri dev` or `tauri build`
   //

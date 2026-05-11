@@ -18,7 +18,19 @@
     "strict": true,
     "noUnusedLocals": true,
     "noUnusedParameters": true,
-    "noFallthroughCasesInSwitch": true
+    "noFallthroughCasesInSwitch": true,
+
+    "baseUrl": ".",
+    "paths": {
+      "@core/*": ["src/core/*"],
+      "@host/*": ["src/host/*"],
+      "@layout/*": ["src/layout/*"],
+      "@shell/*": ["src/shell/*"],
+      "@ui/*": ["src/ui/*"],
+      "@modules/*": ["src/modules/*"],
+      "@stores/*": ["src/stores/*"],
+      "@app/*": ["src/app/*"]
+    }
   },
   "include": ["src/**/*.ts", "src/**/*.d.ts", "src/**/*.tsx", "src/**/*.vue"],
   "references": [{ "path": "./tsconfig.node.json" }]
