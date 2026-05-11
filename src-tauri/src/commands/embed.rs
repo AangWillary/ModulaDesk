@@ -1,4 +1,5 @@
 use serde::Serialize;
+use tauri::Manager;
 
 #[derive(Serialize)]
 pub struct WindowInfo {

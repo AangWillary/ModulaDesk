@@ -2,6 +2,7 @@ mod commands;
 mod core;
 
 use core::window;
+use tauri::Manager;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -12,7 +13,6 @@ pub fn run() {
             if let Some(win) = app.get_webview_window("main") {
                 #[cfg(windows)]
                 {
-                    use tauri::Manager;
                     if let Ok(hwnd) = win.hwnd() {
                         let h = hwnd.0 as isize;
                         window::set_tool_window(h);
