@@ -1,5 +1,5 @@
-use std::path::{Path, PathBuf};
 use crate::types::{AppError, ErrorCode};
+use std::path::{Path, PathBuf};
 
 pub struct StorageEngine {
     base_dir: PathBuf,
@@ -31,7 +31,9 @@ impl StorageEngine {
     }
 
     fn path_for(&self, instance_id: &str, key: &str) -> PathBuf {
-        self.base_dir.join(instance_id).join(format!("{}.json", key))
+        self.base_dir
+            .join(instance_id)
+            .join(format!("{}.json", key))
     }
 
     pub fn get(&self, instance_id: &str, key: &str) -> Result<Option<serde_json::Value>, AppError> {
@@ -44,32 +46,52 @@ impl StorageEngine {
         }
 
         let content = std::fs::read_to_string(&path).map_err(|e| {
-            AppError::new(ErrorCode::StorageError, format!("Failed to read storage: {}", e))
+            AppError::new(
+                ErrorCode::StorageError,
+                format!("Failed to read storage: {}", e),
+            )
         })?;
 
         let value: serde_json::Value = serde_json::from_str(&content).map_err(|e| {
-            AppError::new(ErrorCode::StorageError, format!("Failed to parse storage: {}", e))
+            AppError::new(
+                ErrorCode::StorageError,
+                format!("Failed to parse storage: {}", e),
+            )
         })?;
 
         Ok(Some(value))
     }
 
-    pub fn set(&self, instance_id: &str, key: &str, value: &serde_json::Value) -> Result<(), AppError> {
+    pub fn set(
+        &self,
+        instance_id: &str,
+        key: &str,
+        value: &serde_json::Value,
+    ) -> Result<(), AppError> {
         Self::validate_instance_id(instance_id)?;
         Self::validate_key(key)?;
 
         let dir = self.base_dir.join(instance_id);
         std::fs::create_dir_all(&dir).map_err(|e| {
-            AppError::new(ErrorCode::StorageError, format!("Failed to create storage dir: {}", e))
+            AppError::new(
+                ErrorCode::StorageError,
+                format!("Failed to create storage dir: {}", e),
+            )
         })?;
 
         let path = self.path_for(instance_id, key);
         let content = serde_json::to_string_pretty(value).map_err(|e| {
-            AppError::new(ErrorCode::StorageError, format!("Failed to serialize: {}", e))
+            AppError::new(
+                ErrorCode::StorageError,
+                format!("Failed to serialize: {}", e),
+            )
         })?;
 
         std::fs::write(&path, content).map_err(|e| {
-            AppError::new(ErrorCode::StorageError, format!("Failed to write storage: {}", e))
+            AppError::new(
+                ErrorCode::StorageError,
+                format!("Failed to write storage: {}", e),
+            )
         })?;
 
         Ok(())

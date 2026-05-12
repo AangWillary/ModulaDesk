@@ -1,5 +1,5 @@
-use std::path::{Path, PathBuf};
 use crate::types::{AppError, ErrorCode};
+use std::path::{Path, PathBuf};
 
 pub struct Sandbox {
     allowed_dirs: Vec<PathBuf>,
@@ -17,11 +17,7 @@ impl Sandbox {
                 home_dir.join(".kube"),
                 home_dir.join(".docker"),
             ],
-            allowed_commands: vec![
-                "dir".to_string(),
-                "ls".to_string(),
-                "echo".to_string(),
-            ],
+            allowed_commands: vec!["dir".to_string(), "ls".to_string(), "echo".to_string()],
         }
     }
 
@@ -39,7 +35,10 @@ impl Sandbox {
         if let Some(parent) = p.parent() {
             if parent.exists() {
                 let canonical = parent.canonicalize().map_err(|_| {
-                    AppError::new(ErrorCode::PathBlocked, format!("Parent path not found: {}", path))
+                    AppError::new(
+                        ErrorCode::PathBlocked,
+                        format!("Parent path not found: {}", path),
+                    )
                 })?;
                 self.check_blocked(&canonical)?;
             }
@@ -82,7 +81,9 @@ mod tests {
         let sandbox = Sandbox::new(home.clone());
         let ssh_dir = home.join(".ssh");
         if ssh_dir.exists() {
-            assert!(sandbox.validate_existing_path(ssh_dir.to_str().unwrap()).is_err());
+            assert!(sandbox
+                .validate_existing_path(ssh_dir.to_str().unwrap())
+                .is_err());
         }
     }
 

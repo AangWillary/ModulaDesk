@@ -1,5 +1,5 @@
-use std::collections::HashMap;
 use crate::types::{AppError, ErrorCode, Permission};
+use std::collections::HashMap;
 
 pub struct PermissionChecker {
     granted: HashMap<String, Vec<Permission>>,
@@ -18,7 +18,10 @@ impl PermissionChecker {
             Some(p) if p.contains(&perm) => Ok(()),
             _ => Err(AppError::new(
                 ErrorCode::PermissionDenied,
-                format!("Permission {:?} not granted for instance {}", perm, instance_id),
+                format!(
+                    "Permission {:?} not granted for instance {}",
+                    perm, instance_id
+                ),
             )),
         }
     }
