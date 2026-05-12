@@ -18,6 +18,12 @@ export interface SettingDefinition {
   label: string;
 }
 
+export interface EmbeddedConfig {
+  className?: string;
+  titleMatch?: string;
+  launchCommand?: string;
+}
+
 export interface Manifest {
   id: string;
   name: string;
@@ -29,6 +35,7 @@ export interface Manifest {
   grid: GridConstraints;
   permissions: Permission[];
   settings?: Record<string, SettingDefinition>;
+  embedded?: EmbeddedConfig;
 }
 
 const VALID_TYPES: ModuleType[] = ["web", "native", "embedded"];

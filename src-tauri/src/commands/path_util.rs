@@ -41,12 +41,19 @@ pub fn validate_path(path: &str) -> Result<PathBuf, String> {
     // Blocklist for sensitive hidden directories within home
     let path_str = canonical.to_string_lossy();
     let blocked_dirs = [
-        "/.ssh", "/.gnupg", "/.gpg", "/.aws", "/.azure",
-        "/.config/google-chrome", "/.config/chromium",
-        "/.mozilla", "/.firefox",
+        "/.ssh",
+        "/.gnupg",
+        "/.gpg",
+        "/.aws",
+        "/.azure",
+        "/.config/google-chrome",
+        "/.config/chromium",
+        "/.mozilla",
+        "/.firefox",
         "/AppData/Local/Google/Chrome/User Data",
         "/AppData/Roaming/Mozilla/Firefox",
-        "/.kube", "/.docker",
+        "/.kube",
+        "/.docker",
         "\\AppData\\Local\\Google\\Chrome\\User Data",
         "\\AppData\\Roaming\\Mozilla\\Firefox",
     ];

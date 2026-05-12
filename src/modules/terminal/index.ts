@@ -1,4 +1,4 @@
-import type { Module, ModuleContext } from "../../types/module";
+import type { Module, ModuleContext } from "@core/index";
 
 // Embedded modules don't use the standard lifecycle -
 // the ModuleLoader handles window embedding directly.

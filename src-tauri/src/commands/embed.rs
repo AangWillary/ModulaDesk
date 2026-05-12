@@ -44,7 +44,14 @@ mod win32 {
         pub fn GetWindowLongW(hWnd: HWND, nIndex: i32) -> LONG;
         pub fn SetWindowLongW(hWnd: HWND, nIndex: i32, dwNewLong: LONG) -> LONG;
         pub fn ShowWindow(hWnd: HWND, nCmdShow: i32) -> BOOL;
-        pub fn MoveWindow(hWnd: HWND, X: i32, Y: i32, nWidth: i32, nHeight: i32, bRepaint: BOOL) -> BOOL;
+        pub fn MoveWindow(
+            hWnd: HWND,
+            X: i32,
+            Y: i32,
+            nWidth: i32,
+            nHeight: i32,
+            bRepaint: BOOL,
+        ) -> BOOL;
         pub fn IsWindow(hWnd: HWND) -> BOOL;
     }
 
@@ -77,10 +84,7 @@ pub fn list_windows() -> Result<Vec<WindowInfo>, String> {
     {
         let mut windows = Vec::new();
 
-        unsafe extern "system" fn enum_callback(
-            hwnd: win32::HWND,
-            lparam: isize,
-        ) -> win32::BOOL {
+        unsafe extern "system" fn enum_callback(hwnd: win32::HWND, lparam: isize) -> win32::BOOL {
             unsafe {
                 if win32::IsWindowVisible(hwnd) == 0 {
                     return 1;

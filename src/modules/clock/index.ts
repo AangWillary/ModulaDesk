@@ -1,4 +1,4 @@
-import type { Module, ModuleContext } from "../../types/module";
+import type { Module, ModuleContext } from "@core/index";
 
 let timer: ReturnType<typeof setInterval> | undefined;
 
@@ -58,9 +58,7 @@ const clock: Module = {
       const m = String(now.getMinutes()).padStart(2, "0");
       const s = String(now.getSeconds()).padStart(2, "0");
 
-      timeEl.textContent = showSec
-        ? `${h}:${m}:${s}${ampm}`
-        : `${h}:${m}${ampm}`;
+      timeEl.textContent = showSec ? `${h}:${m}:${s}${ampm}` : `${h}:${m}${ampm}`;
       dateEl.textContent = now.toLocaleDateString("zh-CN", {
         year: "numeric",
         month: "2-digit",

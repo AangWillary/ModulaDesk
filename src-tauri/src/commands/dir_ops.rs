@@ -22,17 +22,11 @@ pub fn read_dir(path: String) -> Result<Vec<DirEntry>, String> {
         let metadata = entry.metadata().map_err(|e| e.to_string())?;
         let name = entry.file_name().to_string_lossy().to_string();
         let file_path = entry.path().to_string_lossy().to_string();
-        let modified = metadata
-            .modified()
-            .ok()
-            .and_then(|t| {
-                let duration = t
-                    .duration_since(std::time::UNIX_EPOCH)
-                    .unwrap_or_default();
-                let datetime =
-                    chrono::DateTime::from_timestamp(duration.as_secs() as i64, 0)?;
-                Some(datetime.format("%Y-%m-%d %H:%M").to_string())
-            });
+        let modified = metadata.modified().ok().and_then(|t| {
+            let duration = t.duration_since(std::time::UNIX_EPOCH).unwrap_or_default();
+            let datetime = chrono::DateTime::from_timestamp(duration.as_secs() as i64, 0)?;
+            Some(datetime.format("%Y-%m-%d %H:%M").to_string())
+        });
 
         result.push(DirEntry {
             name,

@@ -50,15 +50,10 @@ fn validate_url(url: &str) -> Result<(), String> {
 
     // Block internal hostnames using suffix matching (not substring)
     let host_lower = host.to_lowercase();
-    let blocked_suffixes = [
-        ".local", ".internal", ".localhost", ".home.arpa", ".lan",
-    ];
+    let blocked_suffixes = [".local", ".internal", ".localhost", ".home.arpa", ".lan"];
     for suffix in &blocked_suffixes {
         if host_lower.ends_with(suffix) {
-            return Err(format!(
-                "Requests to '{}' domains are not allowed",
-                suffix
-            ));
+            return Err(format!("Requests to '{}' domains are not allowed", suffix));
         }
     }
 
@@ -92,11 +87,7 @@ fn is_private_ip(ip: IpAddr) -> bool {
                 || v4.is_unspecified()
                 || v4.octets() == [169, 254, 169, 254]
         }
-        IpAddr::V6(v6) => {
-            v6.is_loopback()
-                || v6.is_unspecified()
-                || is_ipv6_private(v6)
-        }
+        IpAddr::V6(v6) => v6.is_loopback() || v6.is_unspecified() || is_ipv6_private(v6),
     }
 }
 

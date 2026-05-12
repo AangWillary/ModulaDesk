@@ -1,47 +1,25 @@
 <script setup lang="ts">
-import { ref, onMounted, onBeforeUnmount, onUnmounted, watch } from "vue";
-import type { LayoutItem } from "../stores/layout";
-import type { Module, ModuleContext, Manifest } from "../types/module";
-import { useModuleStore } from "../stores/modules";
-import { createModuleContext } from "../composables/useModuleContext";
-import { invoke } from "@tauri-apps/api/core";
+import { ref, inject, onMounted, onBeforeUnmount, onUnmounted, watch } from "vue";
+import type { LayoutItem } from "@layout/types";
+import type { Manifest } from "@core/manifest";
+import type { AppServices } from "@app/providers";
+import { useModulesStore } from "@stores/modules";
+import { bridge } from "@app/bridge";
 
 const props = defineProps<{ item: LayoutItem }>();
 
-const moduleStore = useModuleStore();
+const appServices = inject<AppServices>("appServices");
+const modulesStore = useModulesStore();
 const containerRef = ref<HTMLElement>();
 const error = ref<string | null>(null);
 const loading = ref(true);
 
-let moduleInstance: Module | null = null;
-let ctx: ModuleContext | null = null;
-let initialized = false;
-let embeddedHwnd: number | null = null;
+let embeddedHwnd: string | null = null;
+let activeModuleId: string | null = null;
+let activeInstanceId: string | null = null;
 
-async function mountWebModule(manifest: Manifest) {
-  if (!containerRef.value) return;
-
-  const mod = await moduleStore.loadModule(props.item.moduleId);
-  moduleInstance = mod;
-
-  ctx = createModuleContext(
-    props.item.moduleId,
-    props.item.instanceId,
-    containerRef.value,
-    manifest
-  );
-
-  moduleStore.registerInstance(props.item.instanceId, mod, manifest);
-
-  if (!initialized && mod.onInit) {
-    await mod.onInit(ctx);
-    initialized = true;
-    moduleStore.markInitialized(props.item.instanceId);
-  }
-
-  if (mod.onMount) {
-    await mod.onMount(ctx);
-  }
+function findManifest(moduleId: string): Manifest | undefined {
+  return modulesStore.available.find((m) => m.id === moduleId);
 }
 
 async function mountEmbeddedModule(manifest: Manifest) {
@@ -50,7 +28,6 @@ async function mountEmbeddedModule(manifest: Manifest) {
   const config = manifest.embedded;
   if (!config) throw new Error("Embedded module missing 'embedded' config");
 
-  // Show placeholder while we search for the window
   containerRef.value.innerHTML = `
     <div style="display:flex;align-items:center;justify-content:center;height:100%;
                 flex-direction:column;gap:8px;color:rgba(255,255,255,0.5);">
@@ -59,13 +36,18 @@ async function mountEmbeddedModule(manifest: Manifest) {
     </div>
   `;
 
-  // Launch process if needed — requires system:shell permission in manifest
+  // Launch process if needed
   if (config.launchCommand) {
     if (!manifest.permissions.includes("system:shell")) {
       throw new Error("Embedded module with launchCommand requires 'system:shell' permission");
     }
     try {
-      await invoke("exec_command", { command: config.launchCommand });
+      const parts = config.launchCommand.split(/\s+/);
+      await bridge.system.exec(
+        { moduleId: manifest.id, instanceId: props.item.instanceId },
+        parts[0],
+        parts.slice(1)
+      );
       await new Promise((r) => setTimeout(r, 1500));
     } catch {
       // Process may already be running
@@ -73,9 +55,11 @@ async function mountEmbeddedModule(manifest: Manifest) {
   }
 
   // Find the target window
-  const windows = await invoke<Array<{ hwnd: number; title: string; className: string }>>(
-    "list_windows"
-  );
+  const windows = (await bridge.window.listWindows()) as Array<{
+    hwnd: number;
+    title: string;
+    className: string;
+  }>;
 
   let target = null;
   for (const w of windows) {
@@ -95,21 +79,12 @@ async function mountEmbeddedModule(manifest: Manifest) {
     );
   }
 
-  embeddedHwnd = target.hwnd;
+  embeddedHwnd = String(target.hwnd);
 
-  // Calculate position relative to container
-  const rect = containerRef.value.getBoundingClientRect();
-  const result = await invoke<boolean>("embed_window", {
-    targetHwnd: target.hwnd,
-    x: 0,
-    y: 0,
-    width: Math.round(rect.width),
-    height: Math.round(rect.height),
-  });
-
-  if (!result) {
-    throw new Error("嵌入窗口失败");
-  }
+  await bridge.window.embedWindow(
+    { moduleId: manifest.id, instanceId: props.item.instanceId },
+    embeddedHwnd
+  );
 
   containerRef.value.innerHTML = `
     <div style="display:flex;align-items:center;justify-content:center;height:100%;
@@ -120,15 +95,25 @@ async function mountEmbeddedModule(manifest: Manifest) {
   `;
 }
 
+async function mountWebModule(manifest: Manifest) {
+  if (!containerRef.value || !appServices) return;
+
+  const instance = (await appServices.modules.createInstance(manifest.id, containerRef.value)) as {
+    instanceId: string;
+  };
+  activeInstanceId = instance.instanceId;
+}
+
 async function mountModule() {
   if (!containerRef.value) return;
+  if (!props.item.moduleId) return;
   loading.value = true;
   error.value = null;
+  activeModuleId = props.item.moduleId;
 
   try {
-    const manifest = moduleStore.getManifest(props.item.moduleId);
-    if (!manifest)
-      throw new Error(`Manifest not found for "${props.item.moduleId}"`);
+    const manifest = findManifest(activeModuleId);
+    if (!manifest) throw new Error(`Manifest not found for "${activeModuleId}"`);
 
     if (manifest.type === "embedded") {
       await mountEmbeddedModule(manifest);
@@ -137,10 +122,7 @@ async function mountModule() {
     }
   } catch (e) {
     error.value = e instanceof Error ? e.message : String(e);
-    console.error(
-      `[ModuleLoader] Failed to mount "${props.item.moduleId}":`,
-      e
-    );
+    console.error(`[ModuleLoader] Failed to mount "${activeModuleId}":`, e);
   } finally {
     loading.value = false;
   }
@@ -153,13 +135,12 @@ watch(
     if (embeddedHwnd === null || !containerRef.value) return;
     try {
       const rect = containerRef.value.getBoundingClientRect();
-      await invoke("resize_embedded", {
-        targetHwnd: embeddedHwnd,
-        x: 0,
-        y: 0,
-        width: Math.round(rect.width),
-        height: Math.round(rect.height),
-      });
+      await bridge.window.resizeEmbedded(
+        { moduleId: activeModuleId ?? "", instanceId: props.item.instanceId },
+        embeddedHwnd,
+        Math.round(rect.width),
+        Math.round(rect.height)
+      );
     } catch (e) {
       console.error("[ModuleLoader] resize error:", e);
     }
@@ -173,29 +154,25 @@ onMounted(() => {
 // Detach embedded window synchronously before DOM is destroyed
 onBeforeUnmount(() => {
   if (embeddedHwnd !== null) {
-    invoke("detach_window", { targetHwnd: embeddedHwnd }).catch((e) =>
-      console.warn("[ModuleLoader] detach failed (window may already be closed):", e)
-    );
+    bridge.window
+      .detachWindow(
+        { moduleId: activeModuleId ?? "", instanceId: props.item.instanceId },
+        embeddedHwnd
+      )
+      .catch((e) =>
+        console.warn("[ModuleLoader] detach failed (window may already be closed):", e)
+      );
     embeddedHwnd = null;
   }
 });
 
-// Run module lifecycle cleanup after DOM is unmounted
 onUnmounted(() => {
-  if (moduleInstance?.onUnmount) {
-    moduleInstance.onUnmount().catch((e) =>
-      console.error("[ModuleLoader] onUnmount error:", e)
-    );
+  if (activeInstanceId && appServices) {
+    appServices.modules
+      .destroyInstance(activeInstanceId)
+      .catch((e) => console.error("[ModuleLoader] destroyInstance error:", e));
+    activeInstanceId = null;
   }
-  if (moduleInstance?.onDestroy) {
-    moduleInstance.onDestroy().catch((e) =>
-      console.error("[ModuleLoader] onDestroy error:", e)
-    );
-  }
-  moduleStore.removeInstance(props.item.instanceId);
-  moduleInstance = null;
-  ctx = null;
-  initialized = false;
 });
 </script>
 

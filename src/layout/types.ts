@@ -10,6 +10,7 @@ export interface Layout {
 
 export interface LayoutItem {
   instanceId: string;
+  moduleId?: string;
   x: number;
   y: number;
   w: number;
@@ -45,10 +46,6 @@ export function ok(layout: Layout): LayoutResult {
   return { ok: true, layout };
 }
 
-export function err(
-  code: LayoutErrorCode,
-  message: string,
-  layout?: Layout,
-): LayoutResult {
+export function err(code: LayoutErrorCode, message: string, layout?: Layout): LayoutResult {
   return { ok: false, code, message, layout };
 }

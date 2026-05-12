@@ -1,4 +1,4 @@
-import type { Module, ModuleContext } from "../../types/module";
+import type { Module, ModuleContext } from "@core/index";
 import { escapeHtml, genId } from "../../utils/html";
 
 interface LaunchItem {
@@ -151,7 +151,9 @@ function render(ctx: ModuleContext, state: QuickLaunchState) {
 
 const quickLaunch: Module = {
   async onInit(ctx: ModuleContext) {
-    console.log(`[quick-launch] onInit called, moduleId=${ctx.moduleId}, instanceId=${ctx.instanceId}`);
+    console.log(
+      `[quick-launch] onInit called, moduleId=${ctx.moduleId}, instanceId=${ctx.instanceId}`
+    );
   },
 
   async onMount(ctx: ModuleContext) {

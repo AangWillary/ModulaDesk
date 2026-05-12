@@ -1,4 +1,4 @@
-import type { Module, ModuleContext, DirEntry } from "../../types/module";
+import type { Module, ModuleContext, DirEntry } from "@core/index";
 import { escapeHtml } from "../../utils/html";
 
 interface ExplorerState {
@@ -13,17 +13,48 @@ function getDesktopPath(): string {
 }
 
 function getFileIcon(entry: DirEntry): string {
-  if (entry.isDir) return "📁";
+  if (entry.isDirectory) return "📁";
   const ext = entry.name.split(".").pop()?.toLowerCase() || "";
   const iconMap: Record<string, string> = {
-    pdf: "📕", doc: "📘", docx: "📘", xls: "📗", xlsx: "📗",
-    ppt: "📙", pptx: "📙", jpg: "🖼️", jpeg: "🖼️", png: "🖼️",
-    gif: "🖼️", svg: "🖼️", mp3: "🎵", wav: "🎵", flac: "🎵",
-    mp4: "🎬", avi: "🎬", mkv: "🎬", mov: "🎬", zip: "📦",
-    rar: "📦", "7z": "📦", tar: "📦", gz: "📦", exe: "⚙️",
-    msi: "⚙️", bat: "⚙️", sh: "⚙️", js: "📜", ts: "📜",
-    py: "📜", rs: "📜", html: "🌐", css: "🌐", json: "📋",
-    xml: "📋", md: "📝", txt: "📝", log: "📝",
+    pdf: "📕",
+    doc: "📘",
+    docx: "📘",
+    xls: "📗",
+    xlsx: "📗",
+    ppt: "📙",
+    pptx: "📙",
+    jpg: "🖼️",
+    jpeg: "🖼️",
+    png: "🖼️",
+    gif: "🖼️",
+    svg: "🖼️",
+    mp3: "🎵",
+    wav: "🎵",
+    flac: "🎵",
+    mp4: "🎬",
+    avi: "🎬",
+    mkv: "🎬",
+    mov: "🎬",
+    zip: "📦",
+    rar: "📦",
+    "7z": "📦",
+    tar: "📦",
+    gz: "📦",
+    exe: "⚙️",
+    msi: "⚙️",
+    bat: "⚙️",
+    sh: "⚙️",
+    js: "📜",
+    ts: "📜",
+    py: "📜",
+    rs: "📜",
+    html: "🌐",
+    css: "🌐",
+    json: "📋",
+    xml: "📋",
+    md: "📝",
+    txt: "📝",
+    log: "📝",
   };
   return iconMap[ext] || "📄";
 }
@@ -78,10 +109,10 @@ function renderFileList(entries: DirEntry[], searchFilter: string) {
     html += '<div class="fe-empty">空文件夹</div>';
   } else {
     for (const entry of filtered) {
-      html += `<div class="fe-item" data-path="${escapeHtml(entry.path)}" data-isdir="${entry.isDir}">`;
+      html += `<div class="fe-item" data-path="${escapeHtml(entry.path)}" data-isdir="${entry.isDirectory}">`;
       html += `<span class="fe-icon">${getFileIcon(entry)}</span>`;
       html += `<span class="fe-name" title="${escapeHtml(entry.name)}">${escapeHtml(entry.name)}</span>`;
-      html += `<span class="fe-size">${entry.isDir ? "" : formatSize(entry.size)}</span>`;
+      html += `<span class="fe-size">${entry.isDirectory ? "" : formatSize(entry.size)}</span>`;
       html += `<span class="fe-time">${entry.modified || ""}</span>`;
       html += "</div>";
     }
@@ -181,7 +212,9 @@ function render(ctx: ModuleContext, state: ExplorerState) {
 
 const fileExplorer: Module = {
   async onInit(ctx: ModuleContext) {
-    console.log(`[file-explorer] onInit called, moduleId=${ctx.moduleId}, instanceId=${ctx.instanceId}`);
+    console.log(
+      `[file-explorer] onInit called, moduleId=${ctx.moduleId}, instanceId=${ctx.instanceId}`
+    );
   },
 
   async onMount(ctx: ModuleContext) {
@@ -191,8 +224,7 @@ const fileExplorer: Module = {
       entries: [],
       searchFilter: "",
     };
-    const startPath =
-      (ctx.settings.startPath as string) || getDesktopPath();
+    const startPath = (ctx.settings.startPath as string) || getDesktopPath();
     await navigate(ctx, state, startPath);
   },
 

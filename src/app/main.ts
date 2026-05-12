@@ -15,7 +15,7 @@ async function main() {
   const layoutEngine = createLayoutEngine();
   const moduleManager = createModuleManager();
   const hostDeps = createHostDependencies();
-  const appServices = createAppServices();
+  const appServices = createAppServices(hostDeps, layoutEngine, moduleManager);
 
   // Phase 1: Load layout, discover modules
   await startupPhase1(layoutEngine, moduleManager);

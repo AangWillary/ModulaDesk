@@ -1,4 +1,4 @@
-import type { Permission, Manifest, Module, ModuleContext } from "@core/index";
+import type { Permission, Module, ModuleContext } from "@core/index";
 
 export interface HostRuntime {
   storageRead(instanceId: string, key: string): Promise<unknown>;

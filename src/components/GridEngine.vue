@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, onBeforeUnmount, inject } from "vue";
+import { ref, computed, onMounted, onBeforeUnmount, inject } from "vue";
 import type { LayoutEngine } from "@layout/engine";
 import GridCell from "./GridCell.vue";
 import ModuleLoader from "./ModuleLoader.vue";
@@ -7,6 +7,16 @@ import ModuleLoader from "./ModuleLoader.vue";
 const layoutEngine = inject<LayoutEngine>("layoutEngine");
 const containerRef = ref<HTMLElement>();
 const containerRect = ref<DOMRect | null>(null);
+
+const layout = computed(() => layoutEngine?.getLayout());
+const gap = computed(() => layout.value?.gap ?? 8);
+const rowHeight = computed(() => layout.value?.rowHeight ?? 100);
+const colWidth = computed(() => {
+  const cols = layout.value?.columns ?? 12;
+  const cw = containerRect.value?.width ?? 0;
+  if (cw === 0) return 100;
+  return (cw - gap.value * (cols + 1)) / cols;
+});
 
 function updateSize() {
   if (!containerRef.value) return;
@@ -50,6 +60,9 @@ function handleRemove(instanceId: string) {
       v-for="item in layoutEngine?.getLayout().items ?? []"
       :key="item.instanceId"
       :item="item"
+      :col-width="colWidth"
+      :row-height="rowHeight"
+      :gap="gap"
       :container-rect="containerRect"
       @move="handleMove"
       @resize="handleResize"

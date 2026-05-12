@@ -10,21 +10,44 @@ pub struct CommandResult {
 /// These are invoked directly via Command::new() — NO shell is used.
 const ALLOWED_COMMANDS: &[&str] = &[
     // System info
-    "whoami", "hostname", "uname", "ver", "systeminfo",
+    "whoami",
+    "hostname",
+    "uname",
+    "ver",
+    "systeminfo",
     // File listing (read-only)
-    "ls", "dir", "tree", "cat", "type", "head", "tail",
+    "ls",
+    "dir",
+    "tree",
+    "cat",
+    "type",
+    "head",
+    "tail",
     // Disk info
-    "df", "du",
+    "df",
+    "du",
     // Process info (read-only)
-    "tasklist", "ps",
+    "tasklist",
+    "ps",
     // Network info (read-only)
-    "ipconfig", "ifconfig", "ping", "nslookup",
+    "ipconfig",
+    "ifconfig",
+    "ping",
+    "nslookup",
     // Date/time
-    "date", "time",
+    "date",
+    "time",
     // Environment
-    "echo", "set", "env", "printenv",
+    "echo",
+    "set",
+    "env",
+    "printenv",
     // Package managers / dev tools
-    "npm", "npx", "cargo", "rustc", "git",
+    "npm",
+    "npx",
+    "cargo",
+    "rustc",
+    "git",
     // Safe builtins
     "pwd",
 ];
@@ -51,10 +74,7 @@ fn parse_and_validate(command: &str) -> Result<(String, Vec<String>), String> {
     let basename = basename.strip_suffix(".exe").unwrap_or(&basename);
 
     if !ALLOWED_COMMANDS.contains(&basename) {
-        return Err(format!(
-            "Command '{}' is not in the allowed list",
-            basename
-        ));
+        return Err(format!("Command '{}' is not in the allowed list", basename));
     }
 
     let args = parts[1..].to_vec();

@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { ref, computed, onBeforeUnmount } from "vue";
-import type { LayoutItem } from "../stores/layout";
+import { computed, onBeforeUnmount, ref } from "vue";
+import type { LayoutItem } from "@layout/types";
 
 const props = defineProps<{
   item: LayoutItem;
@@ -11,12 +11,11 @@ const props = defineProps<{
 }>();
 
 const emit = defineEmits<{
-  move: [item: LayoutItem, x: number, y: number];
-  resize: [item: LayoutItem, w: number, h: number];
+  move: [instanceId: string, x: number, y: number];
+  resize: [instanceId: string, w: number, h: number];
   remove: [instanceId: string];
 }>();
 
-const cellRef = ref<HTMLElement>();
 const isDragging = ref(false);
 const isResizing = ref(false);
 
@@ -26,11 +25,8 @@ let resizeRaf = 0;
 const style = computed(() => {
   const left = props.gap + props.item.x * (props.colWidth + props.gap);
   const top = props.gap + props.item.y * (props.rowHeight + props.gap);
-  const width =
-    props.item.w * props.colWidth + Math.max(0, props.item.w - 1) * props.gap;
-  const height =
-    props.item.h * props.rowHeight +
-    Math.max(0, props.item.h - 1) * props.gap;
+  const width = props.item.w * props.colWidth + Math.max(0, props.item.w - 1) * props.gap;
+  const height = props.item.h * props.rowHeight + Math.max(0, props.item.h - 1) * props.gap;
 
   return {
     left: `${left}px`,
@@ -70,24 +66,21 @@ function onDragMove(e: MouseEvent) {
     const dx = e.clientX - dragStartX;
     const dy = e.clientY - dragStartY;
 
-    const newX = Math.max(
-      0,
-      Math.round(dragOrigX + dx / (props.colWidth + props.gap))
-    );
-    const newY = Math.max(
-      0,
-      Math.round(dragOrigY + dy / (props.rowHeight + props.gap))
-    );
+    const newX = Math.max(0, Math.round(dragOrigX + dx / (props.colWidth + props.gap)));
+    const newY = Math.max(0, Math.round(dragOrigY + dy / (props.rowHeight + props.gap)));
 
     if (newX !== props.item.x || newY !== props.item.y) {
-      emit("move", props.item, newX, newY);
+      emit("move", props.item.instanceId, newX, newY);
     }
   });
 }
 
 function onDragEnd() {
   isDragging.value = false;
-  if (dragRaf) { cancelAnimationFrame(dragRaf); dragRaf = 0; }
+  if (dragRaf) {
+    cancelAnimationFrame(dragRaf);
+    dragRaf = 0;
+  }
   document.removeEventListener("mousemove", onDragMove);
   document.removeEventListener("mouseup", onDragEnd);
 }
@@ -135,14 +128,17 @@ function onResizeMove(e: MouseEvent) {
     if (props.item.maxH) newH = Math.min(newH, props.item.maxH);
 
     if (newW !== props.item.w || newH !== props.item.h) {
-      emit("resize", props.item, newW, newH);
+      emit("resize", props.item.instanceId, newW, newH);
     }
   });
 }
 
 function onResizeEnd() {
   isResizing.value = false;
-  if (resizeRaf) { cancelAnimationFrame(resizeRaf); resizeRaf = 0; }
+  if (resizeRaf) {
+    cancelAnimationFrame(resizeRaf);
+    resizeRaf = 0;
+  }
   document.removeEventListener("mousemove", onResizeMove);
   document.removeEventListener("mouseup", onResizeEnd);
 }
@@ -159,14 +155,13 @@ onBeforeUnmount(() => {
 
 <template>
   <div
-    ref="cellRef"
     class="grid-cell"
     :class="{ dragging: isDragging, resizing: isResizing }"
     :style="style"
     @mousedown="onDragStart"
   >
     <div class="cell-header">
-      <span class="cell-label">{{ item.moduleId }}</span>
+      <span class="cell-label">{{ item.instanceId }}</span>
       <div class="cell-actions">
         <button
           class="cell-action cell-remove"
@@ -180,10 +175,7 @@ onBeforeUnmount(() => {
     <div class="cell-content">
       <slot />
     </div>
-    <div
-      class="cell-resize-handle"
-      @mousedown.stop="onResizeStart"
-    />
+    <div class="cell-resize-handle" @mousedown.stop="onResizeStart" />
   </div>
 </template>
 
@@ -196,7 +188,9 @@ onBeforeUnmount(() => {
   border-radius: 8px;
   display: flex;
   flex-direction: column;
-  transition: border-color 0.15s, box-shadow 0.15s;
+  transition:
+    border-color 0.15s,
+    box-shadow 0.15s;
   overflow: hidden;
 }
 

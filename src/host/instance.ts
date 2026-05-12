@@ -11,11 +11,13 @@ import type { EventBus } from "./event-bus";
 import type { ModuleStorage } from "./storage";
 import { v4 as uuid } from "uuid";
 
+export type SystemAPIFactory = (moduleId: string, instanceId: string) => SystemAPI;
+
 export interface ModuleInstanceManager {
   create(
     moduleId: string,
     factory: ModuleFactory,
-    options: CreateModuleInstanceOptions,
+    options: CreateModuleInstanceOptions
   ): Promise<ModuleInstance>;
   destroy(instanceId: string): Promise<void>;
   suspend(instanceId: string): void;
@@ -29,7 +31,7 @@ export function createModuleInstanceManager(
   permissions: PermissionChecker,
   eventBus: EventBus,
   storage: ModuleStorage,
-  system: SystemAPI,
+  systemFactory: SystemAPIFactory
 ): ModuleInstanceManager {
   const instances = new Map<string, ModuleInstance>();
 
@@ -47,7 +49,7 @@ export function createModuleInstanceManager(
         permissions,
         eventBus,
         storage,
-        system,
+        system: systemFactory(moduleId, instanceId),
       });
 
       const instance: ModuleInstance = {

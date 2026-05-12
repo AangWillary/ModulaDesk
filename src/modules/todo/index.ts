@@ -1,4 +1,4 @@
-import type { Module, ModuleContext } from "../../types/module";
+import type { Module, ModuleContext } from "@core/index";
 import { escapeHtml, genId } from "../../utils/html";
 
 interface TodoItem {
