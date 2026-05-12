@@ -4,7 +4,7 @@ import GridEngine from "./components/GridEngine.vue";
 </script>
 
 <template>
-  <div class="moduladesk">
+  <div class="willdesk">
     <TopBar />
     <GridEngine />
   </div>
@@ -23,7 +23,11 @@ body {
   height: 100%;
   overflow: hidden;
   background: transparent;
-  font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+  font-family:
+    "Segoe UI",
+    system-ui,
+    -apple-system,
+    sans-serif;
 }
 
 #app {
@@ -31,7 +35,7 @@ body {
   height: 100%;
 }
 
-.moduladesk {
+.willdesk {
   width: 100%;
   height: 100%;
   display: flex;

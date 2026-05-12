@@ -1,20 +1,20 @@
 <script setup lang="ts">
-import { ref } from "vue";
-import { useLayoutStore } from "../stores/layout";
-import { useGrid } from "../composables/useGrid";
-import { useModuleStore } from "../stores/modules";
+import { ref, inject } from "vue";
+import type { LayoutEngine } from "@layout/engine";
+import { useModulesStore } from "@stores/modules";
 
-const layout = useLayoutStore();
-const grid = useGrid();
-const moduleStore = useModuleStore();
+const layoutEngine = inject<LayoutEngine>("layoutEngine");
+const modulesStore = useModulesStore();
 
 const showPicker = ref(false);
 
 function addModule(moduleId: string) {
-  const manifest = moduleStore.getManifest(moduleId);
+  if (!layoutEngine) return;
+  const manifest = modulesStore.available.find((m) => m.id === moduleId);
   if (!manifest) return;
-  const item = grid.createItem({
-    moduleId,
+
+  layoutEngine.addItem({
+    instanceId: crypto.randomUUID(),
     w: manifest.grid.defaultWidth,
     h: manifest.grid.defaultHeight,
     minW: manifest.grid.minWidth,
@@ -22,13 +22,16 @@ function addModule(moduleId: string) {
     maxW: manifest.grid.maxWidth,
     maxH: manifest.grid.maxHeight,
   });
-  layout.addItem(item);
   showPicker.value = false;
 }
 
 function addEmpty() {
-  const item = grid.createItem();
-  layout.addItem(item);
+  if (!layoutEngine) return;
+  layoutEngine.addItem({
+    instanceId: crypto.randomUUID(),
+    w: 2,
+    h: 1,
+  });
   showPicker.value = false;
 }
 
@@ -39,13 +42,13 @@ function togglePicker() {
 
 <template>
   <header class="topbar">
-    <h1 class="title">ModulaDesk</h1>
+    <h1 class="title">WillDesk</h1>
     <div class="actions">
       <div class="picker-wrapper">
         <button class="btn btn-primary" @click="togglePicker">+ 添加模块</button>
         <div v-if="showPicker" class="picker-dropdown">
           <button
-            v-for="manifest in moduleStore.getAllManifests()"
+            v-for="manifest in modulesStore.available"
             :key="manifest.id"
             class="picker-item"
             @click="addModule(manifest.id)"
@@ -53,9 +56,7 @@ function togglePicker() {
             <span class="picker-icon">{{ manifest.icon }}</span>
             <span class="picker-name">{{ manifest.name }}</span>
           </button>
-          <div v-if="moduleStore.getAllManifests().length === 0" class="picker-empty">
-            暂无可用模块
-          </div>
+          <div v-if="modulesStore.available.length === 0" class="picker-empty">暂无可用模块</div>
           <div class="picker-divider" />
           <button class="picker-item" @click="addEmpty">
             <span class="picker-icon">📦</span>
