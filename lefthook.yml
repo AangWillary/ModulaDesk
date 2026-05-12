@@ -1,0 +1,10 @@
+pre-commit:
+  commands:
+    eslint:
+      glob: "*.{ts,vue}"
+      run: npx eslint --fix {staged_files} && git add {staged_files}
+    prettier:
+      glob: "*.{ts,vue,json,css}"
+      run: npx prettier --write {staged_files} && git add {staged_files}
+    rust-fmt:
+      run: cargo fmt --manifest-path src-tauri/Cargo.toml --check
